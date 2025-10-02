@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- رأس الصفحة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm bg-gradient-primary text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-1">
+                                <i class="fas fa-brain me-2"></i>
+                                النظام الذكي للتحضير - دمج البصمات والجدول
+                            </h4>
+                            <p class="mb-0">تحليل ذكي لحضور الموظفين بناءً على البصمات ونظام الدوام</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="badge bg-light text-dark fs-6">
+                                {{ selected_date.strftime('%Y-%m-%d') }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلترة متقدمة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="GET" class="advanced-filter-form">
+                        <div class="row g-3">
+                            <!-- نوع التقرير -->
+                            <div class="col-md-2">
+                                <label class="form-label">نوع التقرير</label>
+                                <select class="form-select" name="report_type">
+                                    <option value="daily" {% if report_type == 'daily' %}selected{% endif %}>يومي</option>
+                                    <option value="monthly" {% if report_type == 'monthly' %}selected{% endif %}>شهري</option>
+                                </select>
+                            </div>
+
+                            <!-- التاريخ -->
+                            <div class="col-md-2">
+                                <label class="form-label">التاريخ</label>
+                                <input type="date" class="form-control" name="attendance_date"
+                                       value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                            </div>
+
+                            <!-- الشهر -->
+                            <div class="col-md-2">
+                                <label class="form-label">الشهر</label>
+                                <input type="month" class="form-control" name="month"
+                                       value="{{ selected_month.strftime('%Y-%m') }}">
+                            </div>
+
+                            <!-- نوع الدوام -->
+                            <div class="col-md-2">
+                                <label class="form-label">نوع الدوام</label>
+                                <select class="form-select" name="work_type">
+                                    <option value="">جميع الأنواع</option>
+                                    {% for wt in work_types %}
+                                    <option value="{{ wt }}" {% if request.args.get('work_type') == wt %}selected{% endif %}>
+                                        {{ wt }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- نوع الخدمة -->
+                            <div class="col-md-2">
+                                <label class="form-label">نوع الخدمة</label>
+                                <select class="form-select" name="service_type">
+                                    <option value="">جميع الأنواع</option>
+                                    {% for st in service_types %}
+                                    <option value="{{ st }}" {% if request.args.get('service_type') == st %}selected{% endif %}>
+                                        {{ st }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- موقع السكن -->
+                            <div class="col-md-2">
+                                <label class="form-label">موقع السكن</label>
+                                <select class="form-select" name="housing_location">
+                                    <option value="">جميع المواقع</option>
+                                    {% for loc in housing_locations %}
+                                    <option value="{{ loc }}" {% if request.args.get('housing_location') == loc %}selected{% endif %}>
+                                        {{ loc }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- أزرار التحكم -->
+                            <div class="col-12 mt-3">
+                                <div class="d-flex justify-content-between">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-filter me-1"></i>تطبيق الفلترة
+                                    </button>
+                                    <div>
+                                        <button type="button" class="btn btn-success" onclick="exportReport()">
+                                            <i class="fas fa-file-excel me-1"></i>تصدير
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" onclick="printReport()">
+                                            <i class="fas fa-print me-1"></i>طباعة
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الإحصائيات السريعة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card-group">
+                <div class="card text-white bg-success">
+                    <div class="card-body text-center">
+                        <h3 class="card-title">{{ daily_summary.present_by_fingerprint }}</h3>
+                        <p class="card-text">حاضر (بالبصمة)</p>
+                    </div>
+                </div>
+                <div class="card text-white bg-danger">
+                    <div class="card-body text-center">
+                        <h3 class="card-title">{{ daily_summary.absent }}</h3>
+                        <p class="card-text">غائب</p>
+                    </div>
+                </div>
+                <div class="card text-white bg-warning">
+                    <div class="card-body text-center">
+                        <h3 class="card-title">{{ daily_summary.on_leave }}</h3>
+                        <p class="card-text">في إجازة</p>
+                    </div>
+                </div>
+                <div class="card text-white bg-info">
+                    <div class="card-body text-center">
+                        <h3 class="card-title">{{ daily_summary.total_employees }}</h3>
+                        <p class="card-text">إجمالي الموظفين</p>
+                    </div>
+                </div>
+                <div class="card text-white bg-secondary">
+                    <div class="card-body text-center">
+                        <h3 class="card-title">
+                            {{ ((daily_summary.present_by_fingerprint / daily_summary.total_employees) * 100)|round(1) if daily_summary.total_employees > 0 else 0 }}%
+                        </h3>
+                        <p class="card-text">نسبة الحضور</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول التقرير -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">التقرير الذكي للتحضير</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="smartAttendanceTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>#</th>
+                                    <th>الموظف</th>
+                                    <th>المعلومات الوظيفية</th>
+                                    <th>معلومات السكن</th>
+                                    <th>نوع الدوام</th>
+                                    <th>حالة الجدول</th>
+                                    <th>البصمة</th>
+                                    <th>الحالة النهائية</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for emp in report_data %}
+                                <tr class="status-{{ emp.status_class }}">
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <strong>{{ emp.name }}</strong>
+                                        <br><small class="text-muted">كود: {{ emp.employee_code }}</small>
+                                    </td>
+                                    <td>
+                                        {{ emp.job_title }}
+                                        <br><small class="text-muted">{{ emp.company_name }}</small>
+                                    </td>
+                                    <td>
+                                        {{ emp.housing_name }}
+                                        <br><small class="text-muted">غرفة {{ emp.room_number }} - سرير {{ emp.bed_number }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ emp.work_type }}</span>
+                                        <br><small>{{ emp.work_days }} عمل / {{ emp.off_days }} إجازة</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if emp.schedule_status == 'نشط' %}bg-success{% else %}bg-warning{% endif %}">
+                                            {{ emp.schedule_status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if emp.fingerprint_status == 'مبصم' %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {{ emp.fingerprint_status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge
+                                            {% if emp.final_status == 'حاضر' %}bg-success
+                                            {% elif emp.final_status == 'غائب' %}bg-danger
+                                            {% elif emp.final_status == 'إجازة' %}bg-warning
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ emp.final_status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary" onclick="viewDetails('{{ emp.employee_code }}')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-outline-warning" onclick="editAssignment({{ emp.id }})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        لا توجد بيانات للعرض
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.status-present { background-color: #d4edda !important; }
+.status-absent { background-color: #f8d7da !important; }
+.status-on-leave { background-color: #fff3cd !important; }
+.status-undefined { background-color: #e2e3e5 !important; }
+.card-group .card { margin: 0 3px; }
+</style>
+
+<script>
+function exportReport() {
+    alert('جاري تصدير التقرير...');
+}
+
+function printReport() {
+    window.print();
+}
+
+function viewDetails(employeeCode) {
+    alert('عرض تفاصيل الموظف: ' + employeeCode);
+}
+
+function editAssignment(employeeId) {
+    alert('تعديل تخصيص الموظف: ' + employeeId);
+}
+</script>
+{% endblock %}

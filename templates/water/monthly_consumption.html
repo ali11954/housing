@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- بطاقة العنوان الرئيسي -->
+    <div class="card shadow-lg border-0 mb-4 gradient-bg">
+        <div class="card-body text-center py-4">
+            <h1 class="display-6 mb-2 text-white">
+                <i class="fas fa-calculator me-2"></i>إدخال الاستهلاك الشهري
+            </h1>
+            <p class="lead text-white mb-0">تسجيل وتتبع استهلاك السكنات الشهري</p>
+        </div>
+    </div>
+
+    <!-- بطاقة الفلترة -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-light py-3">
+            <h5 class="mb-0 text-primary"><i class="fas fa-filter me-2"></i>اختيار السكن والشهر</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="housing_unit_id" class="form-label fw-bold">السكن</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-primary text-white">
+                            <i class="fas fa-home"></i>
+                        </span>
+                        <select name="housing_unit_id" class="form-select" required>
+                            <option value="">اختر السكن</option>
+                            {% for housing in housings %}
+                                <option value="{{ housing.id }}" {% if housing_unit_id == housing.id|string %}selected{% endif %}>
+                                    {{ housing.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label for="month" class="form-label fw-bold">الشهر</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-primary text-white">
+                            <i class="fas fa-calendar-alt"></i>
+                        </span>
+                        <input type="month" name="month" value="{{ month or '' }}" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <button type="submit" class="btn btn-primary w-100 py-2">
+                        <i class="fas fa-eye me-2"></i>عرض البيانات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if data %}
+    <!-- بطاقة الإحصائيات السريعة -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card bg-primary text-white shadow-sm">
+                <div class="card-body text-center py-3">
+                    <i class="fas fa-list-alt fa-2x mb-2"></i>
+                    <h4 class="mb-1">{{ data|length }}</h4>
+                    <p class="mb-0">عدد البنود</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-success text-white shadow-sm">
+                <div class="card-body text-center py-3">
+                    <i class="fas fa-cubes fa-2x mb-2"></i>
+                    <h4 class="mb-1" id="totalQty">0</h4>
+                    <p class="mb-0">إجمالي الكمية</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-info text-white shadow-sm">
+                <div class="card-body text-center py-3">
+                    <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
+                    <h4 class="mb-1" id="totalValue">0.00</h4>
+                    <p class="mb-0">إجمالي القيمة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-warning text-white shadow-sm">
+                <div class="card-body text-center py-3">
+                    <i class="fas fa-chart-pie fa-2x mb-2"></i>
+                    <h4 class="mb-1" id="avgPrice">0.00</h4>
+                    <p class="mb-0">متوسط السعر</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول البيانات -->
+    <div class="card shadow border-0">
+        <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-primary">
+                <i class="fas fa-table me-2"></i>بيانات الاستهلاك - {{ month }}
+            </h5>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="clearAll">
+                    <i class="fas fa-eraser me-1"></i>مسح الكل
+                </button>
+                <button type="submit" name="save" class="btn btn-success">
+                    <i class="fas fa-save me-2"></i>حفظ البيانات
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <form method="POST" id="consumptionForm">
+                <input type="hidden" name="housing_unit_id" value="{{ housing_unit_id }}">
+                <input type="hidden" name="month" value="{{ month }}">
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered mb-0" id="consumptionTable">
+                        <thead class="table-primary sticky-top">
+                            <tr>
+                                <th width="25%" class="bg-gradient-th">البند</th>
+                                <th width="20%" class="bg-gradient-th">سعر الوحدة</th>
+                                <th width="20%" class="bg-gradient-th">الكمية</th>
+                                <th width="20%" class="bg-gradient-th">قيمة البند</th>
+                                <th width="15%" class="bg-gradient-th">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in data %}
+                            <tr class="consumption-row">
+                                <td class="fw-bold item-name">{{ item.name }}</td>
+                                <td>
+                                    <div class="input-group">
+                                        <input type="number" name="unit_price_{{ item.expense_item_id }}"
+                                               value="{{ item.unit_price }}" step="0.01"
+                                               class="form-control price_input text-center">
+                                        <span class="input-group-text">ر.س</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group">
+                                        <input type="number" name="qty_{{ item.expense_item_id }}"
+                                               value="{{ item.qty }}" step="0.01"
+                                               class="form-control qty_input text-center">
+                                        <span class="input-group-text">وحدة</span>
+                                    </div>
+                                </td>
+                                <td class="total_price fw-bold text-success text-center">0.00</td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger clear-row">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-secondary fw-bold">
+                            <tr>
+                                <td class="bg-dark text-white">المجموع</td>
+                                <td class="text-center">-</td>
+                                <td class="text-center" id="footerQty">0</td>
+                                <td class="text-center text-success" id="footerTotal">0.00</td>
+                                <td class="text-center">-</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- رسم بياني مصغر -->
+    <div class="card mt-4 shadow border-0">
+        <div class="card-header bg-light py-3">
+            <h5 class="mb-0 text-primary"><i class="fas fa-chart-pie me-2"></i>توزيع الاستهلاك</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="consumptionChart" height="100"></canvas>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .gradient-bg {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .bg-gradient-th {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+        color: white;
+    }
+
+    .stat-card {
+        transition: transform 0.3s ease;
+        border-radius: 10px;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .consumption-row:hover {
+        background-color: #f8f9fa !important;
+    }
+
+    .price_input:focus, .qty_input:focus {
+        border-color: #4facfe;
+        box-shadow: 0 0 0 0.2rem rgba(79, 172, 254, 0.25);
+    }
+
+    .total_price {
+        font-size: 1.1rem;
+    }
+
+    .item-name {
+        background-color: #f8f9fa;
+        position: sticky;
+        left: 0;
+    }
+
+    #consumptionTable {
+        font-size: 0.9rem;
+    }
+
+    .input-group-text {
+        background-color: #e9ecef;
+        font-size: 0.8rem;
+    }
+</style>
+
+<script>
+    // دالة لحساب القيم
+    function recalc(row) {
+        const price = parseFloat(row.querySelector(".price_input").value) || 0;
+        const qty = parseFloat(row.querySelector(".qty_input").value) || 0;
+        const total = (price * qty).toFixed(2);
+        row.querySelector(".total_price").textContent = total;
+        return {price, qty, total: parseFloat(total)};
+    }
+
+    // دالة لتحديث الإحصائيات
+    function updateStats() {
+        let totalQty = 0;
+        let totalValue = 0;
+        let itemCount = 0;
+
+        document.querySelectorAll(".consumption-row").forEach(row => {
+            const result = recalc(row);
+            totalQty += result.qty;
+            totalValue += result.total;
+            itemCount++;
+        });
+
+        // تحديث الإحصائيات
+        document.getElementById("totalQty").textContent = totalQty.toFixed(2);
+        document.getElementById("totalValue").textContent = totalValue.toFixed(2);
+        document.getElementById("avgPrice").textContent = itemCount > 0 ? (totalValue / itemCount).toFixed(2) : "0.00";
+
+        // تحديث التذييل
+        document.getElementById("footerQty").textContent = totalQty.toFixed(2);
+        document.getElementById("footerTotal").textContent = totalValue.toFixed(2);
+
+        // تحديث الرسم البياني
+        updateChart();
+    }
+
+    // دالة لتحديث الرسم البياني
+    function updateChart() {
+        const ctx = document.getElementById('consumptionChart').getContext('2d');
+        const items = [];
+        const values = [];
+
+        document.querySelectorAll(".consumption-row").forEach(row => {
+            const itemName = row.querySelector(".item-name").textContent;
+            const value = parseFloat(row.querySelector(".total_price").textContent) || 0;
+            if (value > 0) {
+                items.push(itemName);
+                values.push(value);
+            }
+        });
+
+        if (window.consumptionChart) {
+            window.consumptionChart.destroy();
+        }
+
+        if (items.length > 0) {
+            window.consumptionChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: items,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            '#4facfe', '#00f2fe', '#667eea', '#764ba2',
+                            '#f093fb', '#f5576c', '#4ecdc4', '#ff6b6b',
+                            '#ffd93d', '#6bcf7f', '#4d96ff', '#ff6b9d'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            rtl: true
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw.toFixed(2)} ر.س`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // أحداث الإدخال
+    document.addEventListener('DOMContentLoaded', function() {
+        // تحديث أولي
+        updateStats();
+
+        // أحداث الإدخال
+        document.querySelectorAll(".price_input, .qty_input").forEach(input => {
+            input.addEventListener("input", () => {
+                updateStats();
+            });
+        });
+
+        // مسح الصف
+        document.querySelectorAll(".clear-row").forEach(btn => {
+            btn.addEventListener("click", function() {
+                const row = this.closest("tr");
+                row.querySelector(".price_input").value = "";
+                row.querySelector(".qty_input").value = "";
+                updateStats();
+            });
+        });
+
+        // مسح الكل
+        document.getElementById("clearAll").addEventListener("click", function() {
+            if (confirm("هل أنت متأكد من مسح جميع البيانات؟")) {
+                document.querySelectorAll(".price_input, .qty_input").forEach(input => {
+                    input.value = "";
+                });
+                updateStats();
+            }
+        });
+
+        // منع إرسال النموذج عند الضغط على Enter في الحقول
+        document.querySelectorAll("input[type='number']").forEach(input => {
+            input.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                }
+            });
+        });
+    });
+</script>
+
+<!-- تأكد من تضمين المكتبات اللازمة -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{% endblock %}

@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+{% block title %}قائمة السكنات{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- بطاقة العنوان الرئيسي -->
+    <div class="card shadow-lg border-0 mb-4 gradient-bg">
+        <div class="card-body text-center py-4">
+            <div class="row align-items-center">
+                <div class="col-md-8 text-md-start text-center">
+                    <h1 class="display-6 mb-2 text-white">
+                        <i class="fas fa-building me-2"></i>إدارة السكنات
+                    </h1>
+                    <p class="lead text-white mb-0">تصفح وإدارة جميع وحدات السكن المتاحة</p>
+                </div>
+                <div class="col-md-4 text-md-end text-center">
+                    <a href="{{ url_for('main.home') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-home me-2"></i>العودة للرئيسية
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقة الإحصائيات السريعة -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card bg-primary text-white shadow-sm">
+                <div class="card-body text-center py-3">
+                    <i class="fas fa-city fa-2x mb-2"></i>
+                    <h3 class="mb-1">{{ units|length if units else 0 }}</h3>
+                    <p class="mb-0">إجمالي السكنات</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-success text-white shadow-sm">
+                <div class="card-body text-center py-3">
+                    <i class="fas fa-door-open fa-2x mb-2"></i>
+                    <h3 class="mb-1">{{ units|sum(attribute='total_rooms') if units else 0 }}</h3>
+                    <p class="mb-0">إجمالي الغرف</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-info text-white shadow-sm">
+                <div class="card-body text-center py-3">
+                    <i class="fas fa-bed fa-2x mb-2"></i>
+                    <h3 class="mb-1">{{ units|sum(attribute='total_beds') if units else 0 }}</h3>
+                    <p class="mb-0">إجمالي الأسرّة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-warning text-white shadow-sm">
+                <div class="card-body text-center py-3">
+                    <i class="fas fa-chart-pie fa-2x mb-2"></i>
+                    <h3 class="mb-1">
+                        {% set total_beds = units|sum(attribute='total_beds') if units else 1 %}
+                        {% set occupied_beds = units|sum(attribute='occupied_beds') if units else 0 %}
+                        {{ ((occupied_beds / total_beds) * 100)|round|int if total_beds > 0 else 0 }}%
+                    </h3>
+                    <p class="mb-0">نسبة الإشغال</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقة التحكم والبحث -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center flex-wrap">
+            <h5 class="mb-0 text-primary">
+                <i class="fas fa-list me-2"></i>قائمة السكنات
+            </h5>
+            <div class="d-flex gap-2 flex-wrap">
+                <div class="input-group" style="max-width: 300px;">
+                    <span class="input-group-text bg-white">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" id="searchInput" class="form-control" placeholder="بحث في السكنات...">
+                </div>
+                <a href="{{ url_for('main.housing_add') }}" class="btn btn-success">
+                    <i class="fas fa-plus-circle me-2"></i>إضافة سكن جديد
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered mb-0" id="housingTable">
+                    <thead class="table-primary sticky-top">
+                        <tr>
+                            <th width="15%" class="bg-gradient-th">
+                                <i class="fas fa-signature me-1"></i>اسم السكن
+                            </th>
+                            <th width="10%" class="bg-gradient-th">
+                                <i class="fas fa-hashtag me-1"></i>رقم السكن
+                            </th>
+                            <th width="10%" class="bg-gradient-th text-center">
+                                <i class="fas fa-door-open me-1"></i>الغرف
+                            </th>
+                            <th width="10%" class="bg-gradient-th text-center">
+                                <i class="fas fa-bed me-1"></i>الأسرّة
+                            </th>
+                            <th width="12%" class="bg-gradient-th text-center">
+                                <i class="fas fa-user-check me-1"></i>مشغولة
+                            </th>
+                            <th width="12%" class="bg-gradient-th text-center">
+                                <i class="fas fa-user-clock me-1"></i>شاغرة
+                            </th>
+                            <th width="16%" class="bg-gradient-th text-center">
+                                <i class="fas fa-chart-bar me-1"></i>معدل الإشغال
+                            </th>
+                            <th width="15%" class="bg-gradient-th text-center">
+                                <i class="fas fa-cogs me-1"></i>الإجراءات
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if units %}
+                            {% for unit in units %}
+                            {% set occupancy_rate = ((unit.occupied_beds / unit.total_beds) * 100)|round|int if unit.total_beds > 0 else 0 %}
+                            <tr class="housing-row" data-name="{{ unit.name }}" data-number="{{ unit.number }}">
+                                <td class="fw-bold housing-name">
+                                    <i class="fas fa-building me-2 text-primary"></i>{{ unit.name }}
+                                </td>
+                                <td class="text-muted">{{ unit.number }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary rounded-pill room-count">{{ unit.total_rooms }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary rounded-pill bed-count">{{ unit.total_beds }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-warning rounded-pill occupied-count">{{ unit.occupied_beds }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-success rounded-pill available-count">{{ unit.available_beds }}</span>
+                                </td>
+                                <td>
+                                    <div class="progress-container">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small class="text-muted">{{ occupancy_rate }}%</small>
+                                            <small class="text-muted">{{ unit.occupied_beds }}/{{ unit.total_beds }}</small>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar
+                                                {% if occupancy_rate >= 80 %}bg-danger
+                                                {% elif occupancy_rate >= 50 %}bg-warning
+                                                {% else %}bg-success{% endif %}"
+                                                role="progressbar"
+                                                style="width: {{ occupancy_rate }}%"
+                                                aria-valuenow="{{ occupancy_rate }}"
+                                                aria-valuemin="0"
+                                                aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{{ url_for('main.housing_rooms', housing_id=unit.id) }}"
+                                           class="btn btn-outline-primary"
+                                           title="عرض الغرف"
+                                           data-bs-toggle="tooltip">
+                                            <i class="fas fa-door-open"></i>
+                                        </a>
+                                        <a href="{{ url_for('main.housing_edit', unit_id=unit.id) }}"
+                                           class="btn btn-outline-info"
+                                           title="تعديل السكن"
+                                           data-bs-toggle="tooltip">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ url_for('main.housing_delete', unit_id=unit.id) }}"
+                                              method="POST"
+                                              class="d-inline delete-form">
+                                            <button type="submit"
+                                                    class="btn btn-outline-danger"
+                                                    title="حذف السكن"
+                                                    data-bs-toggle="tooltip"
+                                                    onclick="return confirmDelete(event)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center py-5">
+                                    <div class="empty-state">
+                                        <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                                        <h5 class="text-muted">لا توجد سكنات</h5>
+                                        <p class="text-muted">لم يتم إضافة أي سكنات بعد</p>
+                                        <a href="{{ url_for('main.housing_add') }}" class="btn btn-primary mt-2">
+                                            <i class="fas fa-plus me-1"></i>إضافة أول سكن
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- زر العودة -->
+    <div class="text-center mt-4">
+        <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-lg">
+            <i class="fas fa-arrow-right me-2"></i>العودة للرئيسية
+        </a>
+    </div>
+</div>
+
+<style>
+    .gradient-bg {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .bg-gradient-th {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+        color: white;
+    }
+
+    .stat-card {
+        transition: transform 0.3s ease;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .housing-row:hover {
+        background-color: #f8f9fa !important;
+        transform: scale(1.002);
+        transition: all 0.2s ease;
+    }
+
+    .housing-name {
+        color: #495057;
+        font-size: 1.1rem;
+    }
+
+    .badge {
+        font-size: 0.8rem;
+        padding: 0.4em 0.6em;
+    }
+
+    .progress {
+        border-radius: 10px;
+        background-color: #e9ecef;
+    }
+
+    .progress-bar {
+        border-radius: 10px;
+        transition: width 0.6s ease;
+    }
+
+    .empty-state {
+        padding: 2rem 0;
+    }
+
+    .btn-group-sm > .btn {
+        padding: 0.3rem 0.5rem;
+        border-radius: 6px;
+    }
+
+    .table-responsive {
+        border-radius: 10px;
+    }
+</style>
+
+<script>
+    // تأكيد الحذف
+    function confirmDelete(event) {
+        if (!confirm('هل أنت متأكد من حذف هذا السكن؟ سيتم حذف جميع الغرف والأسرّة المرتبطة به.')) {
+            event.preventDefault();
+            return false;
+        }
+        return true;
+    }
+
+    // بحث في الجدول
+    document.getElementById('searchInput').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const rows = document.querySelectorAll('.housing-row');
+
+        rows.forEach(row => {
+            const name = row.dataset.name.toLowerCase();
+            const number = row.dataset.number.toLowerCase();
+
+            if (name.includes(searchTerm) || number.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    // تفعيل التولتيبس
+    document.addEventListener('DOMContentLoaded', function() {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // فرز الجدول (وظيفة إضافية)
+        const sortTable = (columnIndex, isNumeric = false) => {
+            const table = document.getElementById('housingTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])'));
+
+            rows.sort((a, b) => {
+                let aValue = a.cells[columnIndex].textContent.trim();
+                let bValue = b.cells[columnIndex].textContent.trim();
+
+                if (isNumeric) {
+                    aValue = parseInt(aValue) || 0;
+                    bValue = parseInt(bValue) || 0;
+                    return aValue - bValue;
+                } else {
+                    return aValue.localeCompare(bValue, 'ar');
+                }
+            });
+
+            // إعادة ترتيب الصفوف
+            rows.forEach(row => tbody.appendChild(row));
+        };
+
+        // إضافة إمكانية الفرز للنقر على الرؤوس (اختياري)
+        const headers = document.querySelectorAll('thead th');
+        headers.forEach((header, index) => {
+            if (index < 2) { // للأعمدة النصية
+                header.style.cursor = 'pointer';
+                header.addEventListener('click', () => sortTable(index, false));
+            } else if (index >= 2 && index <= 5) { // للأعمدة الرقمية
+                header.style.cursor = 'pointer';
+                header.addEventListener('click', () => sortTable(index, true));
+            }
+        });
+    });
+
+    // تحديث تلقائي للإحصائيات (يمكن تطويره لاحقًا)
+    setInterval(() => {
+        // يمكن إضافة تحديث تلقائي للبيانات هنا
+        console.log('تحديث البيانات...');
+    }, 30000); // كل 30 ثانية
+</script>
+
+<!-- تأكد من تضمين المكتبات اللازمة -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}تخصيص الأسرة{% endblock %}
+
+{% block content %}
+<style>
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        direction: rtl; /* دعم الاتجاه من اليمين لليسار */
+        font-family: Arial, sans-serif;
+    }
+    th, td {
+        border: 1px solid #333;
+        padding: 8px;
+        text-align: center;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+    .نشط {
+        background-color: #c8e6c9;
+    }
+    .غير_نشط {
+        background-color: #ffe0b2;
+    }
+    .فارغ {
+        background-color: #f8bbd0;
+    }
+    tr:hover {
+        background-color: #e0f7fa;
+    }
+    .btn-back {
+        margin-top: 20px;
+        display: inline-block;
+    }
+</style>
+
+<h2>تقرير السكنات</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>الوحدة السكنية</th>
+            <th>الغرفة</th>
+            <th>السرير</th>
+            <th>الرقم الوظيفي</th>
+            <th>الاسم</th>
+            <th>الشركة</th>
+            <th>الوظيفة</th>
+            <th>الإدارة</th>
+            <th>الحالة</th>
+            <th>نوع التعيين</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in report %}
+        <tr class="{{ row.status.replace(' ', '_') }}">
+            <td>{{ row.housing_name }}</td>
+            <td>{{ row.room_number }}</td>
+            <td>{{ row.bed_number }}</td>
+            <td>{{ row.employee_code }}</td>
+            <td>{{ row.employee_name }}</td>
+            <td>{{ row.company_name }}</td>
+            <td>{{ row.job_title }}</td>
+            <td>{{ row.department }}</td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.assignment_type }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="10">لا توجد بيانات لعرضها</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{{ url_for('main.housing_report_html') }}" class="btn btn-secondary btn-back">العودة للرئيسية</a>
+
+{% endblock %}

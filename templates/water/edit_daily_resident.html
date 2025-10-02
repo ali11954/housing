@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8" />
+    <title>تعديل بيانات الساكن اليومي</title>
+    <style>
+        body {
+            font-family: 'Tahoma', sans-serif;
+            background-color: #f4f4f4;
+            direction: rtl;
+            text-align: right;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            color: #333;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 25px;
+            border: none;
+            border-radius: 6px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .back-button {
+            background-color: #6c757d;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 15px;
+            border-radius: 6px;
+            color: white;
+        }
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <h1>تعديل بيانات الساكن اليومي</h1>
+
+    <form method="POST">
+        <label for="housing_unit_id">اسم السكن:</label>
+        <select id="housing_unit_id" name="housing_unit_id" required>
+            {% for unit in housing_units %}
+                <option value="{{ unit.id }}" {% if unit.id == entry.housing_unit_id %}selected{% endif %}>
+                    {{ unit.name }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <label for="residents">عدد الساكنين:</label>
+        <input type="number" id="residents" name="residents" value="{{ entry.residents }}" required />
+
+        <label for="date">التاريخ:</label>
+        <input type="date" id="date" name="date" value="{{ entry.date }}" required />
+
+        <button type="submit">حفظ التعديلات</button>
+        <a href="{{ url_for('add_daily_resident') }}" class="back-button">الرجوع</a>
+    </form>
+</body>
+</html>

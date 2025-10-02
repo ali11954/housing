@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}تعديل ربط الأصل{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4 text-center">تعديل ربط الأصل بالسكن والغرفة</h3>
+
+    <!-- عرض الرسائل -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- نموذج تعديل الربط -->
+    <form method="POST" class="row g-3">
+        <div class="col-md-4">
+            <label for="asset_id" class="form-label">اختر الأصل:</label>
+            <select class="form-select" name="asset_id" id="asset_id" required>
+                {% for asset in assets %}
+                <option value="{{ asset.id }}" {% if asset.id == link.asset_id %}selected{% endif %}>
+                    {{ asset.asset_number }} - {{ asset.asset_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label for="housing_id" class="form-label">اختر السكن:</label>
+            <select class="form-select" name="housing_id" id="housing_id" required>
+                {% for housing in housings %}
+                <option value="{{ housing.id }}" {% if housing.id == link.housing_unit_id %}selected{% endif %}>
+                    {{ housing.name }} - {{ housing.number }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <label for="room_id" class="form-label">اختر الغرفة:</label>
+            <select class="form-select" name="room_id" id="room_id" required>
+                {% for room in rooms %}
+                <option value="{{ room.id }}" {% if room.id == link.room_id %}selected{% endif %}>
+                    {{ room.room_number }} ({{ room.housing_unit.name }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-12 mt-3">
+            <button type="submit" class="btn btn-success">حفظ التعديل</button>
+            <a href="{{ url_for('main.link_asset_to_housing') }}" class="btn btn-secondary">رجوع</a>
+        </div>
+    </form>
+
+   <!-- جدول الإجراءات السابقة للأصل -->
+<hr class="my-4">
+<h5>سجل الإجراءات السابقة للأصل:</h5>
+<div class="table-responsive">
+    <table class="table table-bordered table-striped mt-2 text-center">
+        <thead class="table-dark">
+            <tr>
+                <th>نوع الإجراء</th>
+                <th>السكن القديم</th>
+                <th>السكن الجديد</th>
+                <th>الغرفة القديمة</th>
+                <th>الغرفة الجديدة</th>
+                <th>السرير القديم</th>
+                <th>السرير الجديد</th>
+                <th>تاريخ الإجراء</th>
+                <th>تاريخ الشراء</th>
+                <th>تاريخ التصرف</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for action in link.asset.actions %}
+            <tr>
+                <td>{{ action.action_type or '' }}</td>
+                <td>{{ action.old_housing or '' }}</td>
+                <td>{{ action.new_housing or '' }}</td>
+                <td>{{ action.old_room or '' }}</td>
+                <td>{{ action.new_room or '' }}</td>
+                <td>{{ action.old_bed or '' }}</td>
+                <td>{{ action.new_bed or '' }}</td>
+
+                <td>{{ action.action_date.strftime('%Y-%m-%d') if action.action_date else '' }}</td>
+                <td>{{ action.purchase_date.strftime('%Y-%m-%d') if action.purchase_date else '' }}</td>
+                <td>{{ action.disposal_date.strftime('%Y-%m-%d') if action.disposal_date else '' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="10" class="text-center">لا توجد إجراءات مسجلة لهذا الأصل.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+</div>
+{% endblock %}

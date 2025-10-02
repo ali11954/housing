@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}تعديل الأصل{% endblock %}
+{% block content %}
+<h3 class="mb-4">تعديل الأصل</h3>
+
+<form method="POST">
+    <div class="mb-3">
+        <label class="form-label">رقم الأصل</label>
+        <input type="text" name="asset_number" class="form-control" value="{{ asset.asset_number }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">اسم الأصل</label>
+        <input type="text" name="asset_name" class="form-control" value="{{ asset.asset_name }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">بيان الأصل</label>
+        <textarea name="asset_description" class="form-control">{{ asset.asset_description }}</textarea>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">نوع الأصل</label>
+        <input type="text" name="asset_type" class="form-control" value="{{ asset.asset_type }}">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">تاريخ الشراء</label>
+        <input type="date" name="purchase_date" class="form-control" value="{{ asset.purchase_date.strftime('%Y-%m-%d') if asset.purchase_date else '' }}">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">حالة الأصل</label>
+        <select name="status" class="form-select">
+            <option value="جديد" {% if asset.status=='جديد' %}selected{% endif %}>جديد</option>
+            <option value="مستعمل" {% if asset.status=='مستعمل' %}selected{% endif %}>مستعمل</option>
+            <option value="مفقود" {% if asset.status=='مفقود' %}selected{% endif %}>مفقود</option>
+        </select>
+    </div>
+     <!-- زر حفظ التعديل -->
+    <button type="submit" class="btn btn-primary">حفظ التعديلات</button>
+</form>
+{% endblock %}

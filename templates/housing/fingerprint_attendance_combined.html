@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}حضور البصمة{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">حضور البصمة - {{ selected_date }}</h2>
+
+<form method="get" class="mb-3 d-flex gap-2 flex-wrap">
+    <label class="fw-bold">اختر تاريخ: </label>
+    <input type="date" name="date" value="{{ selected_date }}" class="form-control form-control-sm" style="max-width:200px;">
+    <button class="btn btn-primary btn-sm">عرض</button>
+    <button type="button" class="btn btn-success btn-sm" onclick="syncData()">سحب البيانات من البصمة</button>
+    <button type="button" class="btn btn-warning btn-sm" onclick="refreshPage()">تحديث البيانات</button>
+</form>
+
+<div class="alert alert-info fw-bold">
+    إجمالي الموظفين الباصمين: {{ records|length }}
+</div>
+
+<div class="table-responsive">
+<table class="table table-bordered table-striped">
+<thead class="table-success">
+<tr>
+    <th>كود الموظف</th>
+    <th>الاسم</th>
+    <th>تسجيل الدخول</th>
+    <th>تسجيل الخروج</th>
+</tr>
+</thead>
+<tbody>
+{% for record in records %}
+<tr>
+    <td>{{ record.employee_code }}</td>
+    <td>{% if record.employee %}{{ record.employee.name }}{% else %}<span class="text-danger">غير موجود</span>{% endif %}</td>
+    <td>{{ record.check_in or '-' }}</td>
+    <td>{{ record.check_out or '-' }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+function syncData() {
+    axios.get("/sync_fingerprint")
+        .then(res => {
+            alert("✅ تم سحب البيانات بنجاح. عدد السجلات الجديدة: " + res.data.added);
+            location.reload();
+        })
+        .catch(err => alert("❌ حدث خطأ أثناء سحب البيانات"));
+}
+function refreshPage() { location.reload(); }
+</script>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block title %}إدارة المخزون{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">لوحة إدارة المخزون</h2>
+
+    <!-- القائمة الرئيسية للأقسام -->
+    <div class="btn-group mb-3" role="group" aria-label="Inventory Sections">
+        <button class="btn btn-primary" onclick="showSection('assetwarehouse')">الأصول المخزنة</button>
+        <button class="btn btn-success" onclick="showSection('consumables')">المواد المستهلكة</button>
+        <button class="btn btn-warning" onclick="showSection('cleaning')">مواد النظافة</button>
+    </div>
+
+    <!-- قسم الأصول المخزنة -->
+    <div id="assets_warehouse" class="inventory-section">
+        <h4>الأصول المخزنة</h4>
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>رقم الأصل</th>
+                    <th>اسم الأصل</th>
+                    <th>الوصف</th>
+                    <th>نوع الأصل</th>
+                    <th>الحالة</th>
+                    <th>تاريخ الشراء</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asset in assets_warehouse %}
+                <tr>
+                    <td>{{ asset.asset_number }}</td>
+                    <td>{{ asset.asset_name }}</td>
+                    <td>{{ asset.asset_description }}</td>
+                    <td>{{ asset.asset_type }}</td>
+                    <td>{{ asset.status }}</td>
+                    <td>{{ asset.purchase_date.strftime('%Y-%m-%d') if asset.purchase_date else '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- قسم المواد المستهلكة -->
+    <div id="consumables" class="inventory-section" style="display:none;">
+        <h4>المواد المستهلكة</h4>
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>اسم المادة</th>
+                    <th>الكمية</th>
+                    <th>الوحدة</th>
+                    <th>تاريخ الإدخال</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in consumables %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.unit }}</td>
+                    <td>{{ item.entry_date.strftime('%Y-%m-%d') if item.entry_date else '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- قسم مواد النظافة -->
+    <div id="cleaning" class="inventory-section" style="display:none;">
+        <h4>مواد النظافة</h4>
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>اسم المادة</th>
+                    <th>الكمية</th>
+                    <th>الوحدة</th>
+                    <th>تاريخ الإدخال</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cleaning %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.unit }}</td>
+                    <td>{{ item.entry_date.strftime('%Y-%m-%d') if item.entry_date else '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function showSection(sectionId) {
+    document.querySelectorAll('.inventory-section').forEach(sec => sec.style.display = 'none');
+    document.getElementById(sectionId).style.display = 'block';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>خريطة السكنات</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container py-4">
+    <h3 class="mb-4 text-center">خريطة السكنات</h3>
+
+    <!-- الأزرار -->
+    <div class="d-flex flex-wrap justify-content-center gap-2 mb-4">
+        {% for housing in housings %}
+            <a href="{{ url_for('bp.housing_map', housing_id=housing.id) }}"
+               class="btn btn-primary shadow-sm rounded-pill px-4">
+                🏠 {{ housing.name }}
+            </a>
+        {% endfor %}
+    </div>
+
+    <!-- يمكنك إضافة محتوى إضافي هنا -->
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

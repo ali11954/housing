@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% block title %} لوحة التقارير {% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- رأس الصفحة المحسن -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h1 class="h2 fw-bold text-primary mb-1">📊 لوحة التقارير</h1>
+                    <p class="text-muted">مركز التقارير الشامل لإدارة السكن والموظفين</p>
+                </div>
+                <div class="bg-primary text-white p-3 rounded-circle d-none d-md-flex" style="width: 60px; height: 60px;">
+                    <i class="fas fa-chart-bar fa-lg mx-auto my-auto"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقات التقارير المحسنة -->
+    <div class="row g-4">
+        <!-- تقرير السكنات -->
+        <div class="col-md-6 col-xl-4">
+            <div class="card report-card h-100 border-0 shadow-hover">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-container bg-info bg-opacity-10 p-3 rounded-circle me-3">
+                            <i class="fas fa-building fa-lg text-info"></i>
+                        </div>
+                        <h5 class="card-title mb-0 fw-bold">تقرير السكنات</h5>
+                    </div>
+                    <p class="card-text text-muted mb-3">عرض جميع السكنات مع تفاصيل الغرف والأسرة المتاحة.</p>
+                    <a href="{{ url_for('main.housing_report') }}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-eye me-2"></i>عرض التقرير
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- تقرير الموظفين -->
+        <div class="col-md-6 col-xl-4">
+            <div class="card report-card h-100 border-0 shadow-hover">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-container bg-primary bg-opacity-10 p-3 rounded-circle me-3">
+                            <i class="fas fa-users fa-lg text-primary"></i>
+                        </div>
+                        <h5 class="card-title mb-0 fw-bold">تقرير الموظفين</h5>
+                    </div>
+                    <p class="card-text text-muted mb-3">عرض جميع الموظفين وبياناتهم الأساسية.</p>
+                    <a href="{{ url_for('main.housing_report_view') }}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-eye me-2"></i>عرض التقرير
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- تقرير الموظفين متقدم -->
+        <div class="col-md-6 col-xl-4">
+            <div class="card report-card h-100 border-0 shadow-hover">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-container bg-purple bg-opacity-10 p-3 rounded-circle me-3">
+                            <i class="fas fa-user-tie fa-lg text-purple"></i>
+                        </div>
+                        <h5 class="card-title mb-0 fw-bold">تقرير الموظفين المتقدم</h5>
+                    </div>
+                    <p class="card-text text-muted mb-3">عرض متقدم لبيانات الموظفين مع خيارات تصفية متعددة.</p>
+                    <a href="{{ url_for('main.employees_report') }}" class="btn btn-outline-purple w-100">
+                        <i class="fas fa-chart-line me-2"></i>عرض التقرير
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- تقرير التسكين المتقدم -->
+        <div class="col-md-6 col-xl-4">
+            <div class="card report-card h-100 border-0 shadow-hover">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-container bg-success bg-opacity-10 p-3 rounded-circle me-3">
+                            <i class="fas fa-brain fa-lg text-success"></i>
+                        </div>
+                        <h5 class="card-title mb-0 fw-bold">تقرير التسكين المتقدم</h5>
+                    </div>
+                    <p class="card-text text-muted mb-3">عرض ذكي للتسكين مع مقترحات تلقائية وتحليلات متقدمة.</p>
+                    <a href="{{ url_for('main.housing_report_advanced') }}" class="btn btn-outline-success w-100">
+                        <i class="fas fa-cogs me-2"></i>عرض التقرير
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- تقرير ربط الموظفين بالأسرة -->
+        <div class="col-md-6 col-xl-4">
+            <div class="card report-card h-100 border-0 shadow-hover">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-container bg-warning bg-opacity-10 p-3 rounded-circle me-3">
+                            <i class="fas fa-bed fa-lg text-warning"></i>
+                        </div>
+                        <h5 class="card-title mb-0 fw-bold">تقرير ربط الموظفين بالأسرة</h5>
+                    </div>
+                    <p class="card-text text-muted mb-3">عرض تفصيلي للموظفين المرتبطين بالسكن والغرف والأسرة.</p>
+                    <a href="{{ url_for('main.beds_report') }}" class="btn btn-outline-warning w-100">
+                        <i class="fas fa-link me-2"></i>عرض التقرير
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- تقرير تاريخي لتنقلات الموظفين -->
+        <div class="col-md-6 col-xl-4">
+            <div class="card report-card h-100 border-0 shadow-hover">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-container bg-secondary bg-opacity-10 p-3 rounded-circle me-3">
+                            <i class="fas fa-exchange-alt fa-lg text-secondary"></i>
+                        </div>
+                        <h5 class="card-title mb-0 fw-bold">تقرير تنقلات الموظفين</h5>
+                    </div>
+                    <p class="card-text text-muted mb-3">سجل تاريخي كامل لجميع تنقلات الموظفين بين السكنات.</p>
+                    <a href="{{ url_for('main.transfers_report') }}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-history me-2"></i>عرض التقرير
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قسم إضافي للإحصائيات السريعة -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card border-0 bg-light">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3">📈 نظرة سريعة على الإحصائيات</h5>
+                    <div class="row text-center">
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 bg-white rounded shadow-sm">
+                                <h4 class="fw-bold text-primary">{{ stats.total_housings }}</h4>
+                                <small class="text-muted">سكن نشط</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 bg-white rounded shadow-sm">
+                                <h4 class="fw-bold text-success">{{ stats.total_employees }}</h4>
+                                <small class="text-muted">موظف مسكن</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 bg-white rounded shadow-sm">
+                                <h4 class="fw-bold text-warning">{{ stats.vacant_rooms }}</h4>
+                                <small class="text-muted">غرف شاغرة</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 bg-white rounded shadow-sm">
+                                <h4 class="fw-bold text-info">{{ stats.recent_transfers }}</h4>
+                                <small class="text-muted">تنقلات هذا الشهر</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- صف إضافي للإحصائيات -->
+                    <div class="row text-center mt-3">
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 bg-white rounded shadow-sm">
+                                <h4 class="fw-bold text-danger">{{ stats.occupied_beds }}</h4>
+                                <small class="text-muted">أسرة مشغولة</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 bg-white rounded shadow-sm">
+                                <h4 class="fw-bold text-secondary">{{ stats.total_beds }}</h4>
+                                <small class="text-muted">إجمالي الأسرة</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 bg-white rounded shadow-sm">
+                                <h4 class="fw-bold text-success">{{ stats.occupancy_rate }}%</h4>
+                                <small class="text-muted">نسبة الإشغال</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="p-3 bg-white rounded shadow-sm">
+                                <h4 class="fw-bold text-purple">{{ stats.total_companies }}</h4>
+                                <small class="text-muted">شركة</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    :root {
+        --purple: #6f42c1;
+        --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        --shadow-hover: 0 10px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .bg-purple {
+        background-color: var(--purple) !important;
+    }
+
+    .text-purple {
+        color: var(--purple) !important;
+    }
+
+    .btn-outline-purple {
+        color: var(--purple);
+        border-color: var(--purple);
+    }
+
+    .btn-outline-purple:hover {
+        background-color: var(--purple);
+        color: white;
+    }
+
+    .report-card {
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .report-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    .shadow-hover {
+        box-shadow: var(--shadow);
+    }
+
+    .icon-container {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+    }
+
+    @media (max-width: 768px) {
+        .card-body {
+            padding: 1.5rem !important;
+        }
+
+        .icon-container {
+            width: 45px;
+            height: 45px;
+        }
+    }
+</style>
+
+<script>
+    // إضافة تأثيرات تفاعلية إضافية
+    document.addEventListener('DOMContentLoaded', function() {
+        // إضافة تأثير عند التمرير للبطاقات
+        const cards = document.querySelectorAll('.report-card');
+
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        cards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            observer.observe(card);
+        });
+    });
+</script>
+{% endblock %}

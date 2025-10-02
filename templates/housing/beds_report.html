@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% block title %}تقرير تخصيص الأسرة{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <!-- رأس الصفحة مع العنوان وأزرار التصدير -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">تقرير تخصيص الأسرة</h2>
+    <div>
+      <a href="{{ url_for('main.beds_report_pdf', start_date=start_date, end_date=end_date, housing_unit=housing_filter) }}"
+         class="btn btn-danger me-2">
+        <i class="fas fa-file-pdf me-1"></i> تصدير PDF
+      </a>
+      <a href="{{ url_for('main.beds_report_excel', format='excel', start_date=start_date, end_date=end_date, housing_unit=housing_filter) }}"
+         class="btn btn-success">
+        <i class="fas fa-file-excel me-1"></i> تصدير Excel
+      </a>
+    </div>
+  </div>
+
+  <!-- بطاقة الفلاتر -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="fas fa-filter me-2"></i>فلاتر التقرير</h5>
+    </div>
+    <div class="card-body">
+      <form method="GET" class="row g-3">
+        <div class="col-md-3">
+          <label for="start_date" class="form-label">من تاريخ</label>
+          <input type="date" class="form-control" name="start_date" value="{{ start_date }}" required>
+        </div>
+        <div class="col-md-3">
+          <label for="end_date" class="form-label">إلى تاريخ</label>
+          <input type="date" class="form-control" name="end_date" value="{{ end_date }}" required>
+        </div>
+        <div class="col-md-3">
+          <label for="housing_unit" class="form-label">السكن</label>
+          <select class="form-select" name="housing_unit">
+            <option value="">الكل</option>
+            {% for h in housing_units %}
+              <option value="{{ h.name }}" {% if h.name == housing_filter %}selected{% endif %}>{{ h.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3 align-self-end">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-search me-1"></i> تطبيق الفلاتر
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- بطاقة الخلاصة العامة -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>الخلاصة العامة</h5>
+    </div>
+    <div class="card-body">
+      <div class="row text-center">
+        <div class="col-md-6 mb-3">
+          <div class="p-3 bg-light rounded">
+            <h3 class="text-primary">{{ overall_summary.total_beds }}</h3>
+            <p class="mb-0">إجمالي الأسرة العام</p>
+          </div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <div class="p-3 bg-light rounded">
+            <h3 class="text-success">{{ overall_summary.total_employees }}</h3>
+            <p class="mb-0">إجمالي الموظفين العام</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- بيانات التقرير -->
+  {% for housing_info in report_data %}
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center bg-secondary text-white">
+        <div>
+          <h5 class="mb-0">السكن: {{ housing_info.housing.name }}</h5>
+        </div>
+        <div>
+          <span class="badge bg-light text-dark fs-6">إجمالي الأسرة: {{ housing_info.summary.total_beds }}</span>
+          <span class="badge bg-light text-dark fs-6 ms-2">إجمالي الموظفين: {{ housing_info.summary.total_employees }}</span>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <!-- التحليل الذكي والمقترحات -->
+        {% if housing_info.ai_suggestions %}
+          <div class="alert alert-warning">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-robot fa-lg me-2"></i>
+              <h5 class="mb-0">تحليل ذكي ومقترحات</h5>
+            </div>
+            <hr>
+            <ul class="mb-0 ps-3">
+              {% for s in housing_info.ai_suggestions %}
+                <li>{{ s }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <!-- جدول البيانات -->
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped table-hover">
+            <thead class="table-dark">
+              <tr>
+                <th width="10%">الغرفة</th>
+                <th width="10%">رقم السرير</th>
+                <th width="30%">الموظفون المرتبطون</th>
+                <th width="15%">نوع الدوام</th>
+                <th width="15%">التناوب</th>
+                <th width="20%">آخر نقل</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in housing_info.beds %}
+                <tr>
+                  <td>{{ item.bed.room.room_number }}</td>
+                  <td>{{ item.bed.bed_number }}</td>
+                  <td>
+                    {% if item.assignments %}
+                      <div class="employee-list">
+                        {% for a in item.assignments %}
+                          <div class="employee-item mb-2 p-2 bg-light rounded">
+                            <div class="d-flex justify-content-between">
+                              <strong>{{ a.employee_name }}</strong>
+                              <span class="badge bg-primary">{{ a.employee_code }}</span>
+                            </div>
+                            <div class="text-muted small">
+                              {{ a.start_date }}{% if a.end_date %} - {{ a.end_date }}{% endif %}
+                            </div>
+                            <div class="text-muted small">
+                              {{ a.assignment_type }}
+                            </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <span class="text-muted fst-italic">فارغ</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.assignments %}
+                      {% for a in item.assignments %}
+                        <span class="badge {% if a.work_type == 'دوام كامل' %}bg-success{% elif a.work_type == 'دوام جزئي' %}bg-warning{% else %}bg-secondary{% endif %} mb-1">
+                          {{ a.work_type or 'غير محدد' }}
+                        </span>
+                      {% endfor %}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.assignments %}
+                      {% for a in item.assignments %}
+                        <div class="mb-1">
+                          {{ a.rotation_info or '-' }}
+                        </div>
+                      {% endfor %}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.assignments %}
+                      {% for a in item.assignments %}
+                        <div class="mb-1">
+                          {% if a.last_transfer %}
+                            <span class="badge bg-info">{{ a.last_transfer.transfer_date.date() }}</span>
+                            <div class="small text-muted">{{ a.last_transfer.transfer_type }}</div>
+                          {% else %}
+                            <span class="text-muted">-</span>
+                          {% endif %}
+                        </div>
+                      {% endfor %}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- تحسينات CSS -->
+<style>
+  body {
+    direction: rtl;
+    text-align: right;
+  }
+
+  .table {
+    font-size: 0.9rem;
+  }
+
+  .employee-item {
+    border-left: 3px solid #0d6efd;
+  }
+
+  .card-header h5 {
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    .d-flex.justify-content-between.align-items-center {
+      flex-direction: column;
+      align-items: flex-start !important;
+    }
+
+    .d-flex.justify-content-between.align-items-center > div {
+      margin-bottom: 1rem;
+      width: 100%;
+    }
+
+    .table-responsive {
+      font-size: 0.8rem;
+    }
+
+    .badge.fs-6 {
+      font-size: 0.75rem !important;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .card-header.d-flex.justify-content-between.align-items-center {
+      flex-direction: column;
+      align-items: flex-start !important;
+    }
+
+    .card-header .badge {
+      margin-top: 0.5rem;
+      margin-right: 0 !important;
+    }
+  }
+</style>
+
+<!-- إضافة أيقونات FontAwesome -->
+<script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+{% endblock %}

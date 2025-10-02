@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}الشركة اليمنية لتكرير السكر{% endblock %}</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+
+  <!-- Font Awesome للرموز -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary-color: #2A6FC9; /* أزرق أغمق */
+      --primary-light: #4A90E2;
+      --primary-dark: #1A5BB0;
+      --secondary-color: #5A54D6; /* بنفسجي أغمق */
+      --accent-color: #2EC4D6; /* تركواز أغمق */
+      --accent-light: #4CD8E8;
+      --success-color: #3DA33A;
+      --warning-color: #E6A700;
+      --danger-color: #E53E3E;
+      --light-color: #f8f9fa;
+      --dark-color: #2D3748;
+      --gray-light: #F1F5F9;
+      --gray-medium: #E2E8F0;
+      --gray-dark: #64748B;
+
+      --gradient-header: linear-gradient(135deg, #1A5BB0 0%, #2A6FC9 50%, #4A90E2 100%); /* تدرج أزرق أغمق */
+      --gradient-footer: linear-gradient(135deg, #1A5BB0 0%, #2A6FC9 100%); /* تدرج أغمق للفوتر */
+      --gradient-light: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+      --gradient-accent: linear-gradient(135deg, #2EC4D6 0%, #2A6FC9 100%);
+
+      --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+      --shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.15);
+      --shadow-heavy: 0 8px 16px rgba(0, 0, 0, 0.2);
+
+      --border-radius: 8px;
+      --border-radius-lg: 12px;
+      --transition: all 0.3s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      background: var(--gradient-light);
+      color: var(--dark-color);
+      overflow-x: hidden;
+    }
+
+    main {
+      flex: 1;
+      padding-bottom: 1.5rem;
+    }
+
+    .container-custom {
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 15px;
+    }
+
+    /* ======== الهيدر المحسن - جميع العناصر في صف واحد ======== */
+    .navbar {
+      padding: 0.4rem 1rem; /* تصغير كبير في الارتفاع */
+      background: var(--gradient-header); /* لون أغمق */
+      box-shadow: var(--shadow-medium);
+      border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+      transition: var(--transition);
+      min-height: 50px; /* ارتفاع أصغر */
+      backdrop-filter: blur(8px);
+    }
+
+    .navbar.scrolled {
+      padding: 0.3rem 1rem;
+      box-shadow: var(--shadow-heavy);
+    }
+
+    /* جميع العناصر في صف واحد */
+    .navbar-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 1rem;
+    }
+
+    /* الشعار - مصغر */
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: white !important;
+      transition: var(--transition);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .navbar-brand img {
+      height: 24px;
+      margin-left: 8px;
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
+      transition: var(--transition);
+    }
+
+    .navbar-brand:hover img {
+      transform: scale(1.08);
+    }
+
+    .navbar-brand:hover {
+      transform: translateY(-1px);
+    }
+
+    /* القائمة - في صف واحد */
+    .navbar-nav {
+      flex-direction: row;
+      align-items: center;
+      gap: 0.2rem;
+      margin: 0;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+    }
+
+    /* روابط التنقل - مصغرة */
+    .nav-link {
+      font-weight: 500;
+      padding: 0.35rem 0.8rem !important;
+      border-radius: 16px;
+      transition: var(--transition);
+      color: rgba(255, 255, 255, 0.95) !important;
+      position: relative;
+      overflow: hidden;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-link:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 0;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.15);
+      transition: var(--transition);
+      border-radius: 16px;
+    }
+
+    .nav-link:hover:before, .nav-link.active:before {
+      width: 100%;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: white !important;
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* القائمة المنسدلة - مصغرة */
+    .dropdown-menu {
+      border: none;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-medium);
+      padding: 0.4rem 0;
+      background: rgba(42, 111, 201, 0.95);
+      backdrop-filter: blur(10px);
+      animation: fadeIn 0.2s ease;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .dropdown-item {
+      padding: 0.4rem 1rem;
+      transition: var(--transition);
+      color: white;
+      font-size: 0.8rem;
+    }
+
+    .dropdown-item:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+    }
+
+    .dropdown-divider {
+      border-color: rgba(255, 255, 255, 0.2);
+      margin: 0.2rem 0;
+    }
+
+    /* أزرار التحكم - مصغرة */
+    .controls-container {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+    }
+
+    .btn-control {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      transition: var(--transition);
+      box-shadow: var(--shadow-light);
+      position: relative;
+      overflow: hidden;
+      font-size: 0.7rem;
+    }
+
+    .btn-control:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 0;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.2);
+      transition: var(--transition);
+      border-radius: 50%;
+    }
+
+    .btn-control:hover:before {
+      width: 100%;
+    }
+
+    .btn-control:hover {
+      transform: translateY(-2px) scale(1.1);
+      box-shadow: var(--shadow-medium);
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* زر القائمة للجوال - مصغر */
+    .navbar-toggler {
+      border: none;
+      padding: 0.15rem 0.3rem;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      transition: var(--transition);
+      width: 30px;
+      height: 30px;
+    }
+
+    .navbar-toggler:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .navbar-toggler:focus {
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+    }
+
+    .navbar-toggler-icon {
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+      width: 0.9em;
+      height: 0.9em;
+    }
+
+    /* ======== الفوتر المحسن - لون أغمق ======== */
+    footer {
+      background: var(--gradient-footer); /* لون أغمق من الهيدر */
+      color: white;
+      padding: 0.6rem 1rem; /* تصغير الارتفاع */
+      text-align: center;
+      font-size: 0.8rem;
+      margin-top: auto;
+      box-shadow: 0 -3px 10px rgba(0,0,0,0.15);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+      min-height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    footer::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-color), var(--primary-light));
+      opacity: 0.8;
+    }
+
+    footer::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: right 0.8s ease;
+    }
+
+    footer:hover::after {
+      right: 100%;
+    }
+
+    footer strong {
+      color: #FFD700; /* لون ذهبي للمصمم */
+      font-weight: 700;
+      position: relative;
+    }
+
+    footer strong::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      right: 0;
+      width: 0;
+      height: 1px;
+      background: #FFD700;
+      transition: width 0.3s ease;
+    }
+
+    footer:hover strong::after {
+      width: 100%;
+    }
+
+    /* ======== تأثيرات إضافية ======== */
+    .fade-in {
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ======== تحسينات للجوال ======== */
+    @media (max-width: 991px) {
+      .navbar-container {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .navbar-nav {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        margin-top: 0.5rem;
+      }
+
+      .controls-container {
+        margin-right: auto;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .navbar-brand span {
+        display: none;
+      }
+
+      .container-custom {
+        padding: 0 10px;
+      }
+
+      .navbar {
+        padding: 0.3rem 0.8rem;
+        min-height: 45px;
+      }
+
+      .nav-link {
+        padding: 0.3rem 0.6rem !important;
+        font-size: 0.75rem;
+      }
+
+      .btn-control {
+        width: 26px;
+        height: 26px;
+      }
+
+      footer {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.75rem;
+        min-height: 40px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .navbar-nav {
+        gap: 0.1rem;
+      }
+
+      .nav-link {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.7rem;
+      }
+
+      .nav-link i {
+        margin-left: 0.2rem !important;
+      }
+    }
+
+    /* ======== وضع الظلام ======== */
+    .dark-mode {
+      --gradient-light: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+      background: var(--gradient-light);
+      color: #F1F5F9;
+    }
+
+    .dark-mode .navbar {
+      background: linear-gradient(135deg, #1A5BB0 0%, #2A6FC9 100%);
+    }
+
+    .dark-mode footer {
+      background: linear-gradient(135deg, #1A5BB0 0%, #2A6FC9 100%);
+    }
+
+    /* ======== شريط التقدم ======== */
+    .progress-container {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 100%;
+      height: 2px;
+      background: transparent;
+      z-index: 10000;
+    }
+
+    .progress-bar {
+      height: 2px;
+      background: var(--gradient-accent);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- شريط التقدم -->
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <!-- الهيدر المحسن - جميع العناصر في صف واحد -->
+  <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+    <div class="container-custom">
+      <div class="navbar-container">
+        <!-- الشعار -->
+        <a class="navbar-brand" href="{{ url_for('main.home') }}">
+          <img src="{{ url_for('static', filename='images/logo.png') }}" alt="شعار الشركة">
+          <span>الشركة اليمنية لتكرير السكر</span>
+        </a>
+
+        <!-- القائمة الرئيسية -->
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('main.home') }}">
+              <i class="fas fa-home me-1"></i> الرئيسية
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.water_dashboard') }}">
+              <i class="fas fa-tachometer-alt me-1"></i> لوحة التحكم
+            </a>
+          </li>
+
+    <!-- قائمة الأقسام -->
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+            <i class="fas fa-th me-1"></i> الأقسام
+        </a>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#"><i class="fas fa-industry me-2"></i>الإنتاج</a></li>
+            <li><a class="dropdown-item" href="#"><i class="fas fa-warehouse me-2"></i>المخازن</a></li>
+            <li><a class="dropdown-item" href="#"><i class="fas fa-chart-line me-2"></i>المبيعات</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#"><i class="fas fa-file-alt me-2"></i>التقارير</a></li>
+        </ul>
+    </li>
+
+    <!-- إدارة المستخدمين (تظهر فقط للمسؤولين) -->
+    {% if current_user.is_authenticated and (current_user.has_permission('manage_users') or current_user.role == 'admin') %}
+    <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('main.users_list') }}">
+            <i class="fas fa-users me-1"></i> إدارة المستخدمين
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#">
+            <i class="fas fa-chart-bar me-1"></i> التقارير
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#">
+            <i class="fas fa-cog me-1"></i> الإعدادات
+        </a>
+    </li>
+    {% endif %}
+</ul>
+        <!-- أزرار التحكم -->
+        <div class="controls-container">
+          <!-- زر تسجيل الدخول/الخروج -->
+          {% if current_user.is_authenticated %}
+          <div class="dropdown">
+            <button class="btn-control dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                    title="{{ current_user.username }}">
+              <i class="fas fa-user-circle"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <span class="dropdown-item-text">
+                  <small>مرحباً</small><br>
+                  <strong>{{ current_user.username }}</strong>
+                </span>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item" href="{{ url_for('main.profile') }}">
+                  <i class="fas fa-user me-2"></i>الملف الشخصي
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="{{ url_for('main.logout') }}"
+                   onclick="return confirm('هل أنت متأكد من تسجيل الخروج؟')">
+                  <i class="fas fa-sign-out-alt me-2"></i>تسجيل الخروج
+                </a>
+              </li>
+            </ul>
+          </div>
+          {% else %}
+          <a href="{{ url_for('main.login') }}" class="btn-control" title="تسجيل الدخول">
+            <i class="fas fa-sign-in-alt"></i>
+          </a>
+          {% endif %}
+
+          <!-- الأزرار الأصلية -->
+          <a href="javascript:history.back()" class="btn-control" title="الرجوع">
+            <i class="fas fa-arrow-right"></i>
+          </a>
+          <a href="{{ url_for('main.home') }}" class="btn-control" title="الرئيسية">
+            <i class="fas fa-home"></i>
+          </a>
+          <button class="btn-control" onclick="toggleHelp()" title="التعليمات">
+            <i class="fas fa-question-circle"></i>
+          </button>
+          <button class="btn-control" onclick="toggleAppInfo()" title="معلومات التطبيق">
+            <i class="fas fa-info-circle"></i>
+          </button>
+          <button class="btn-control" onclick="toggleDarkMode()" title="تبديل الوضع الليلي">
+            <i class="fas fa-moon"></i>
+          </button>
+        </div>
+
+        <!-- زر القائمة للجوال -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mobileMenu">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- محتوى الصفحة -->
+  <main class="container-custom fade-in">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' if category == 'warning' else 'info-circle' }} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="إغلاق"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- زر العودة العائم -->
+  <button class="back-to-top" onclick="scrollToTop()" title="العودة للأعلى">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+
+  <!-- الفوتر المحسن - لون أغمق -->
+  <footer class="fade-in">
+    تصميم البرنامج / <strong>م. علي مبارك</strong> | جميع الحقوق محفوظة &copy; 2025
+  </footer>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // إظهار/إخفاء زر العودة للأعلى
+    window.addEventListener('scroll', function() {
+      const backToTopButton = document.querySelector('.back-to-top');
+      if (window.pageYOffset > 300) {
+        backToTopButton.classList.add('show');
+      } else {
+        backToTopButton.classList.remove('show');
+      }
+
+      // تأثير Navbar عند التمرير
+      const navbar = document.querySelector('.navbar');
+      if (window.pageYOffset > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+
+      // شريط التقدم
+      updateProgressBar();
+    });
+
+    // التمرير السلس للأعلى
+    function scrollToTop() {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+
+    // شريط التقدم
+    function updateProgressBar() {
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById("progressBar").style.width = scrolled + "%";
+    }
+
+    // تبديل الوضع الليلي
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      const icon = document.querySelector('[onclick="toggleDarkMode()"] i');
+      if (document.body.classList.contains('dark-mode')) {
+        icon.classList.replace('fa-moon', 'fa-sun');
+        localStorage.setItem('darkMode', 'enabled');
+      } else {
+        icon.classList.replace('fa-sun', 'fa-moon');
+        localStorage.setItem('darkMode', 'disabled');
+      }
+    }
+
+    // تحميل تفضيل الوضع الليلي
+    document.addEventListener('DOMContentLoaded', function() {
+      if (localStorage.getItem('darkMode') === 'enabled') {
+        document.body.classList.add('dark-mode');
+        const icon = document.querySelector('[onclick="toggleDarkMode()"] i');
+        icon.classList.replace('fa-moon', 'fa-sun');
+      }
+    });
+
+    // وظائف مساعدة
+    function toggleHelp() {
+      alert('سيتم فتح دليل المستخدم قريباً');
+    }
+
+    function toggleAppInfo() {
+      alert('الشركة اليمنية لتكرير السكر\nإصدار البرنامج: 2.1.0\nآخر تحديث: أكتوبر 2025');
+    }
+  </script>
+</body>
+</html>

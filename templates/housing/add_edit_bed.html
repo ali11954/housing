@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} السرير - {{ room.room_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+            <!-- بطاقة العنوان الرئيسي -->
+            <div class="card shadow-lg border-0 mb-4 gradient-bg">
+                <div class="card-body text-center py-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8 text-md-start text-center">
+                            <h1 class="display-6 mb-2 text-white">
+                                <i class="fas fa-bed me-2"></i>{{ action }} السرير
+                            </h1>
+                            <p class="lead text-white mb-0">الغرفة: {{ room.room_number }}</p>
+                        </div>
+                        <div class="col-md-4 text-md-end text-center">
+                            {% if show_back_button %}
+                            <a href="{{ url_for('main.housing_rooms', housing_id=housing.id) }}"
+                               class="btn btn-outline-light btn-sm mt-2">
+                                <i class="fas fa-arrow-right me-1"></i>العودة للغرف
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- بطاقة النموذج -->
+            <div class="card shadow border-0">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0 text-primary">
+                        <i class="fas fa-edit me-2"></i>معلومات السرير
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" novalidate class="needs-validation" id="bedForm">
+                        <!-- رقم السرير -->
+                        <div class="mb-4">
+                            <label for="bed_number" class="form-label fw-bold">
+                                <i class="fas fa-hashtag me-2 text-primary"></i>رقم السرير
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-primary text-white">
+                                    <i class="fas fa-bed"></i>
+                                </span>
+                                <input type="text" class="form-control form-control-lg"
+                                       id="bed_number" name="bed_number" required
+                                       value="{{ bed.bed_number if bed else '' }}"
+                                       placeholder="أدخل رقم السرير (مثال: ١، ٢، أ، ب)">
+                                <div class="valid-feedback">
+                                    ✓ رقم السرير صحيح
+                                </div>
+                                <div class="invalid-feedback">
+                                    الرجاء إدخال رقم السرير بشكل صحيح
+                                </div>
+                            </div>
+                            <small class="form-text text-muted mt-1">
+                                يمكن استخدام الأرقام أو الحروف العربية أو الإنجليزية
+                            </small>
+                        </div>
+
+                        <!-- نوع السرير -->
+                        <div class="mb-4">
+                            <label for="bed_type" class="form-label fw-bold">
+                                <i class="fas fa-tag me-2 text-primary"></i>نوع السرير
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-primary text-white">
+                                    <i class="fas fa-star"></i>
+                                </span>
+                                <select class="form-select form-select-lg" id="bed_type" name="bed_type" required>
+                                    <option value="">اختر نوع السرير</option>
+                                    <option value="عادي" {% if bed and bed.bed_type == 'عادي' %}selected{% endif %}>عادي</option>
+                                    <option value="مميز" {% if bed and bed.bed_type == 'مميز' %}selected{% endif %}>مميز</option>
+                                    <option value="VIP" {% if bed and bed.bed_type == 'VIP' %}selected{% endif %}>VIP</option>
+                                    <option value="مستعجل" {% if bed and bed.bed_type == 'مستعجل' %}selected{% endif %}>مستعجل</option>
+                                </select>
+                                <div class="valid-feedback">
+                                    ✓ نوع السرير محدد
+                                </div>
+                                <div class="invalid-feedback">
+                                    الرجاء اختيار نوع السرير
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- حالة السرير -->
+                        <div class="mb-4">
+                            <label for="is_occupied" class="form-label fw-bold">
+                                <i class="fas fa-circle me-2 text-primary"></i>حالة السرير
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-primary text-white">
+                                    <i class="fas fa-info-circle"></i>
+                                </span>
+                                <select class="form-select form-select-lg" id="is_occupied" name="is_occupied" required>
+                                    <option value="0" {% if bed and not bed.is_occupied %}selected{% endif %}>متاح</option>
+                                    <option value="1" {% if bed and bed.is_occupied %}selected{% endif %}>مشغول</option>
+                                </select>
+                                <div class="valid-feedback">
+                                    ✓ حالة السرير محددة
+                                </div>
+                                <div class="invalid-feedback">
+                                    الرجاء اختيار حالة السرير
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ملاحظات -->
+                        <div class="mb-4">
+                            <label for="notes" class="form-label fw-bold">
+                                <i class="fas fa-sticky-note me-2 text-primary"></i>ملاحظات (اختياري)
+                            </label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"
+                                      placeholder="أي ملاحظات إضافية حول السرير...">{{ bed.notes if bed and bed.notes else '' }}</textarea>
+                        </div>
+
+                        <!-- معاينة المعلومات -->
+                        <div class="card preview-card mb-4" id="previewCard" style="display: none;">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-eye me-2"></i>معاينة المعلومات</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>رقم السرير:</strong> <span id="previewNumber">-</span></p>
+                                        <p><strong>نوع السرير:</strong> <span id="previewType">-</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><strong>الحالة:</strong> <span id="previewStatus">-</span></p>
+                                        <p><strong>الغرفة:</strong> {{ room.room_number }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- أزرار التحكم -->
+                        <div class="d-flex gap-3 flex-wrap justify-content-center mt-4">
+                            <button type="submit" class="btn btn-success btn-lg px-4">
+                                <i class="fas fa-save me-2"></i>{{ action }}
+                            </button>
+                            <button type="button" class="btn btn-info btn-lg px-4" id="previewBtn">
+                                <i class="fas fa-eye me-2"></i>معاينة
+                            </button>
+                            <a href="{{ url_for('main.room_beds', room_id=room.id) }}" class="btn btn-outline-secondary btn-lg px-4">
+                                <i class="fas fa-times me-2"></i>إلغاء
+                            </a>
+                            <a href="{{ url_for('main.housing_rooms', housing_id=room.housing_unit_id) }}"
+                               class="btn btn-outline-primary btn-lg px-4">
+                                <i class="fas fa-door-open me-2"></i>العودة للغرف
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- معلومات الغرفة -->
+            <div class="card mt-4 shadow-sm border-0">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-3"><i class="fas fa-info-circle me-2"></i>معلومات الغرفة</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="stat-item">
+                                <i class="fas fa-door-open fa-2x text-primary mb-2"></i>
+                                <p class="mb-0 fw-bold">{{ room.room_number }}</p>
+                                <small class="text-muted">رقم الغرفة</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-item">
+                                <i class="fas fa-bed fa-2x text-success mb-2"></i>
+                                <p class="mb-0 fw-bold">{{ room.beds|length if room.beds else 0 }}</p>
+                                <small class="text-muted">عدد الأسرّة</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-item">
+                                <i class="fas fa-users fa-2x text-warning mb-2"></i>
+                                <p class="mb-0 fw-bold">
+                                    {% set occupied_beds = room.beds|selectattr('is_occupied')|list if room.beds else [] %}
+                                    {{ occupied_beds|length }}
+                                </p>
+                                <small class="text-muted">أسرّة مشغولة</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .gradient-bg {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .preview-card {
+        border-left: 4px solid #17a2b8;
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    .stat-item {
+        padding: 1rem;
+        transition: transform 0.3s ease;
+    }
+
+    .stat-item:hover {
+        transform: translateY(-5px);
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #4facfe;
+        box-shadow: 0 0 0 0.2rem rgba(79, 172, 254, 0.25);
+    }
+
+    .input-group-text {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        border: none;
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+    }
+
+    .btn-success:hover {
+        background: linear-gradient(135deg, #218838 0%, #1e9e8a 100%);
+        transform: translateY(-2px);
+        transition: all 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .was-validated .form-control:valid {
+        border-color: #28a745;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+    }
+</style>
+
+<script>
+    // تفعيل التحقق من صحة النموذج
+    (() => {
+        'use strict'
+        const form = document.getElementById('bedForm')
+
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+        }, false)
+
+        // التحقق أثناء الكتابة
+        const inputs = form.querySelectorAll('input, select')
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                if (input.checkValidity()) {
+                    input.classList.add('is-valid')
+                    input.classList.remove('is-invalid')
+                } else {
+                    input.classList.add('is-invalid')
+                    input.classList.remove('is-valid')
+                }
+            })
+        })
+    })()
+
+    // معاينة المعلومات
+    document.getElementById('previewBtn').addEventListener('click', function() {
+        const bedNumber = document.getElementById('bed_number').value || '-'
+        const bedType = document.getElementById('bed_type').value || '-'
+        const bedStatus = document.getElementById('is_occupied').value
+
+        document.getElementById('previewNumber').textContent = bedNumber
+        document.getElementById('previewType').textContent = bedType
+        document.getElementById('previewStatus').textContent = bedStatus === '1' ? 'مشغول' : 'متاح'
+
+        const previewCard = document.getElementById('previewCard')
+        previewCard.style.display = 'block'
+
+        // تأثير ظهور
+        previewCard.style.animation = 'none'
+        setTimeout(() => {
+            previewCard.style.animation = 'fadeIn 0.5s ease-in'
+        }, 10)
+    })
+
+    // إضافة تأثيرات للعناصر
+    document.addEventListener('DOMContentLoaded', function() {
+        // تأثيرات الإدخال
+        const inputs = document.querySelectorAll('.form-control, .form-select')
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('shadow-sm')
+            })
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('shadow-sm')
+            })
+        })
+
+        // تعبئة تلقائية لرقم السرير إذا كان إضافة جديد
+        {% if not bed %}
+        document.getElementById('bed_number').focus()
+        {% endif %}
+    })
+
+    // منع إرسال النموذج بالضغط على Enter في الحقول النصية
+    document.getElementById('bed_number').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            document.getElementById('bed_type').focus()
+        }
+    })
+</script>
+
+<!-- تأكد من تضمين المكتبات اللازمة -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+{% endblock %}

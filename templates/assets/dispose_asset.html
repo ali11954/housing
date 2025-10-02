@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>تسجيل اتلاف الأصل: {{ asset.name }}</h3>
+<form method="post">
+    <div class="mb-3">
+        <label for="reason" class="form-label">سبب الاتلاف:</label>
+        <textarea name="reason" id="reason" class="form-control" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-danger">تسجيل الاتلاف</button>
+  <a href="{{ url_for('main.assets_dashboard') }}" class="btn btn-secondary">إلغاء</a>
+
+</form>
+{% endblock %}

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @font-face {
+            font-family: 'Amiri';
+            src: url("D:/ghith/NEW/rooms/fonts/Amiri - Regular.ttf") format("truetype");
+        }
+        body {
+            font-family: 'Amiri', serif;
+            direction: rtl;
+            text-align: right;
+            font-size: 14px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6px;
+            text-align: right;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .housing-row {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .room-row {
+            background-color: #f9f9f9;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h2>تقرير الأصول المرتبطة بالسكنات</h2>
+
+    {% for housing in housings %}
+        <table>
+            <tr class="housing-row">
+                <td colspan="5">{{ housing.name }}</td>
+            </tr>
+            {% for room in housing.rooms %}
+                <tr class="room-row">
+                    <td colspan="5">الغرفة: {{ room.name }}</td>
+                </tr>
+                <tr>
+                    <th>الموظف</th>
+                    <th>الوظيفة</th>
+                    <th>الإدارة</th>
+                    <th>الأصل</th>
+                    <th>الحالة</th>
+                </tr>
+                {% for bed in room.beds %}
+                    {% if bed.employee %}
+                        <tr>
+                            <td>{{ bed.employee.full_name }}</td>
+                            <td>{{ bed.employee.job_title }}</td>
+                            <td>{{ bed.employee.department }}</td>
+                            <td>
+                                {% if bed.employee.assets %}
+                                    {% for asset in bed.employee.assets %}
+                                        {{ asset.name }}<br>
+                                    {% endfor %}
+                                {% else %}
+                                    لا يوجد
+                                {% endif %}
+                            </td>
+                            <td>{{ bed.employee.status or 'غير محدد' }}</td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align:center;">السرير فارغ</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </table>
+    {% endfor %}
+</body>
+</html>

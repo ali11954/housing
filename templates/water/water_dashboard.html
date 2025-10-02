@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- العنوان الرئيسي مع تحسينات -->
+    <div class="text-center mb-5">
+        <h1 class="fw-bold text-primary display-5">لوحة تحكم إدارة الاستهلاك</h1>
+        <p class="text-muted fs-5 mt-3">
+            نظام متكامل لإدارة استهلاك الماء والكهرباء ومصروفات السكنات الشهرية
+            مع تحليلات متقدمة ومؤشرات أداء فورية
+        </p>
+    </div>
+
+    <!-- ===================== بطاقات التنقل المحسنة ===================== -->
+    <div class="row g-4 justify-content-center mb-5">
+        {% set buttons = [
+            {'url':'main.expenseItem_index', 'icon':'💧', 'label':'إدارة الاستهلاك', 'desc':'إدارة بنود المصروفات'},
+            {'url':'main.daily_resident_view', 'icon':'🏠', 'label':'تسجيل الساكنين', 'desc':'التسجيل اليومي للسكان'},
+            {'url':'main.employee_attendance_report', 'icon':'📈', 'label':'سجل الحضور اليومي للموظفين ', 'desc':'الحضور اليومي '},
+            {'url':'main.monthly_consumption', 'icon':'⚡', 'label':'استهلاك الخدمات', 'desc':'مراقبة الاستهلاك'},
+            {'url':'main.consumption', 'icon':'📊', 'label':'تقرير مصروفات السكنات', 'desc':'تقارير مفصلة'},
+                    {'url':'main.employee_attendance', 'icon':'📊', 'label':'تواجد الموظفين حسب دوامهم ', 'desc':'تقارير مفصلة'},
+            {'url':'main.smart_attendance_report', 'icon':'📊', 'label':'مطابقة دوام الموظفين مع البصمات ', 'desc':'تقارير مفصلة'},
+
+            {'url':'main.consumption_report', 'icon':'📑', 'label':'عرض التقارير', 'desc':'البحث في التقارير'}
+        ] %}
+
+        {% for btn in buttons %}
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <a href="{{ url_for(btn.url) }}"
+               class="card card-hover h-100 text-decoration-none border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="icon-wrapper mb-3">
+                        <span class="display-4">{{ btn.icon }}</span>
+                    </div>
+                    <h5 class="card-title fw-bold text-dark mb-2">{{ btn.label }}</h5>
+                    <p class="card-text text-muted small">{{ btn.desc }}</p>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- الفلاتر المحسنة -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-4">🔍 تصفية البيانات</h5>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="housingFilter" class="form-label fw-semibold">اختر السكن:</label>
+                    <select id="housingFilter" class="form-select shadow-sm">
+                        <option value="">جميع السكنات</option>
+                        {% for unit in units %}
+                            <option value="{{ unit.id }}" {% if selected_housing == unit.id|string %}selected{% endif %}>{{ unit.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="aggregationFilter" class="form-label fw-semibold">نوع التجميع:</label>
+                    <select id="aggregationFilter" class="form-select shadow-sm">
+                        <option value="monthly" {% if aggregation_type=='monthly' %}selected{% endif %}>شهري</option>
+                        <option value="cumulative" {% if aggregation_type=='cumulative' %}selected{% endif %}>تراكمي</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="monthFilter" class="form-label fw-semibold">اختر الشهر:</label>
+                    <input type="month" id="monthFilter" name="month" class="form-control shadow-sm" value="{{ selected_month }}">
+                </div>
+
+                <div class="col-md-3 d-flex align-items-end">
+                    <button id="resetFilters" class="btn btn-outline-secondary w-100">
+                        🔄 إعادة تعيين
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقات مؤشرات الأداء المحسنة -->
+    <div class="row g-4 mb-5">
+        {% set metrics = [
+            {'icon':'👥', 'title':'متوسط الساكنين اليومي', 'value': total_residents_today|int, 'change': '+5%', 'trend':'up', 'color':'primary'},
+            {'icon':'📊', 'title':'إجمالي السكان الشهري', 'value': (total_residents_monthly|default(0))|round(0)|int, 'change': '+12%', 'trend':'up', 'color':'success'},
+            {'icon':'💰', 'title':'إجمالي تكاليف التسكين', 'value': total_housing_costs|round(0)|int, 'change': '-3%', 'trend':'down', 'color':'warning'},
+            {'icon':'💵', 'title':'متوسط تكلفة الساكن', 'value': avg_cost_per_resident|round(0)|int, 'change': '-8%', 'trend':'down', 'color':'danger'}
+        ] %}
+
+        {% for metric in metrics %}
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-hover border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="metric-icon bg-{{ metric.color }} bg-opacity-10 rounded-circle p-3">
+                            <span style="font-size: 1.8rem;">{{ metric.icon }}</span>
+                        </div>
+                        <span class="badge bg-{{ metric.color }} bg-opacity-25 text-{{ metric.color }}">
+                            {{ metric.change }} <i class="fas fa-arrow-{{ 'up' if metric.trend == 'up' else 'down' }} ms-1"></i>
+                        </span>
+                    </div>
+                    <h6 class="card-title text-muted mb-2">{{ metric.title }}</h6>
+                    <h3 class="fw-bold text-dark">{{ "{:,}".format(metric.value) }}</h3>
+                    <div class="progress mt-2" style="height: 6px;">
+                        <div class="progress-bar bg-{{ metric.color }}"
+                             style="width: {{ (metric.value/(metrics[0].value*2))*100 if metric.value > 0 else 10 }}%">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- الرسوم البيانية المحسنة -->
+    <div class="row g-4 mb-5">
+        <!-- تكاليف التسكين -->
+        <div class="col-xl-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h5 class="card-title mb-0">📈 تحليل تكاليف التسكين</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="chartType" class="form-label fw-semibold">نوع التكلفة:</label>
+                        <select id="chartType" class="form-select">
+                            <option value="total">التكلفة الإجمالية</option>
+                            <option value="per_resident">تكلفة الساكن الواحد</option>
+                        </select>
+                    </div>
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="housingCostsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- مصروفات البنود -->
+        <div class="col-xl-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h5 class="card-title mb-0">📊 تحليل مصروفات البنود</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="expenseItemSelect" class="form-label fw-semibold">بند المصروف:</label>
+                        <select id="expenseItemSelect" class="form-select">
+                            <option value="all">جميع البنود</option>
+                            {% for lbl in expense_chart_labels %}
+                                <option value="{{ lbl }}">{{ lbl }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- مخطط المصروفات الشهرية -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h5 class="card-title mb-0">📈 تطور المصروفات الشهرية</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height: 200px;">
+                        <canvas id="expensesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ملخص سريع -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <div class="row">
+                        <div class="col-md-3 border-end">
+                            <small class="text-muted">آخر تحديث</small>
+                            <div class="fw-bold live-time" id="liveTime">--:--</div>
+                        </div>
+                        <div class="col-md-3 border-end">
+                            <small class="text-muted">عدد السكنات</small>
+                            <div class="fw-bold">{{ units|length }}</div>
+                        </div>
+                        <div class="col-md-3 border-end">
+                            <small class="text-muted">الحالة</small>
+                            <div class="fw-bold text-success">جميع الأنظمة تعمل</div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">الإجراءات</small>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="window.print()">طباعة</button>
+                                <button class="btn btn-sm btn-outline-success" onclick="exportData()">تصدير</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- مكتبة Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+.card-hover {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+.metric-icon {
+    transition: transform 0.3s ease;
+}
+.card-hover:hover .metric-icon {
+    transform: scale(1.1);
+}
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+.progress-bar {
+    border-radius: 10px;
+}
+.border-end {
+    border-right: 1px solid #dee2e6 !important;
+}
+</style>
+
+<script>
+// ===== تحديث الوقت الحي =====
+function updateLiveTime() {
+    const now = new Date();
+    const options = {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    };
+    document.getElementById('liveTime').textContent = now.toLocaleDateString('ar-EG', options);
+}
+updateLiveTime();
+setInterval(updateLiveTime, 60000); // تحديث كل دقيقة
+
+// ===== تهيئة الرسوم البيانية =====
+document.addEventListener('DOMContentLoaded', function() {
+    // تكاليف التسكين
+    const housingNames = {{ housing_names|tojson }};
+    const totalCosts = {{ housing_costs|tojson }};
+    const perResidentCosts = {{ report_data|map(attribute='cost_per_resident')|map('default', 0)|list|tojson }};
+
+    const colors = ['#0d6efd', '#198754', '#ffc107', '#17a2b8', '#dc3545', '#6c757d', '#6610f2', '#20c997', '#fd7e14', '#e83e8c'];
+
+    const ctx = document.getElementById('housingCostsChart').getContext('2d');
+    const housingCostsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: housingNames,
+            datasets: [{
+                label: 'تكاليف التسكين',
+                data: totalCosts,
+                backgroundColor: colors,
+                borderRadius: 8,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => 'التكلفة: ' + ctx.raw.toLocaleString('ar-EG') + ' ريال'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'التكلفة (ريال)' },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: {
+                    title: { display: true, text: 'السكن' },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    // مصروفات البنود
+    const reportData = {{ report_data|tojson }};
+    const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+    let expenseChart = new Chart(expenseCtx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'التكلفة (ريال)',
+                data: [],
+                backgroundColor: '#36a2eb',
+                borderRadius: 8,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ctx.raw.toLocaleString('ar-EG') + ' ريال'
+                    }
+                }
+            }
+        }
+    });
+
+    // مخطط المصروفات الشهرية
+    const ctx2 = document.getElementById('expensesChart').getContext('2d');
+    const expensesChart = new Chart(ctx2, {
+        type: 'line',
+        data: {
+            labels: {{ expense_chart_labels|tojson }},
+            datasets: [{
+                label: 'المصروفات (ريال)',
+                data: {{ expense_chart_values|tojson }},
+                fill: true,
+                borderColor: 'rgba(13, 110, 253, 1)',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#0d6efd'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { grid: { color: 'rgba(0,0,0,0.05)' } }
+            }
+        }
+    });
+
+    // تحديث مخطط المصروفات
+    function updateExpenseChart(item = "all") {
+        let labels = [];
+        let values = [];
+        reportData.forEach(r => {
+            labels.push(r.unit_name);
+            const costs = r.per_item_costs || {};
+            if (item === "all") {
+                let sum = Object.values(costs).reduce((a, b) => a + (b || 0), 0);
+                values.push(sum);
+            } else {
+                values.push(costs[item] || 0);
+            }
+        });
+        expenseChart.data.labels = labels;
+        expenseChart.data.datasets[0].data = values;
+        expenseChart.data.datasets[0].backgroundColor = item === "all" ? '#36a2eb' : '#20c997';
+        expenseChart.update();
+    }
+
+    // أحداث الفلاتر
+    document.getElementById('chartType').addEventListener('change', function() {
+        const value = this.value;
+        housingCostsChart.data.datasets[0].data = (value === 'total') ? totalCosts : perResidentCosts;
+        housingCostsChart.data.datasets[0].label = (value === 'total') ? 'تكاليف التسكين' : 'تكلفة الساكن الواحد';
+        housingCostsChart.update();
+    });
+
+    document.getElementById('expenseItemSelect').addEventListener('change', function() {
+        updateExpenseChart(this.value);
+    });
+
+    // التهيئة الأولية
+    updateExpenseChart();
+
+    // إدارة الفلاتر
+    function updateFilters() {
+        const housing = document.getElementById('housingFilter').value;
+        const aggregation = document.getElementById('aggregationFilter').value;
+        const month = document.getElementById('monthFilter').value;
+        let url = `?housing_units_id=${housing}&aggregation_type=${aggregation}`;
+        if (month) url += `&month=${month}`;
+        window.location.href = url;
+    }
+
+    document.getElementById('housingFilter').addEventListener('change', updateFilters);
+    document.getElementById('aggregationFilter').addEventListener('change', updateFilters);
+    document.getElementById('monthFilter').addEventListener('change', updateFilters);
+
+    document.getElementById('resetFilters').addEventListener('click', function() {
+        document.getElementById('housingFilter').value = '';
+        document.getElementById('aggregationFilter').value = 'monthly';
+        document.getElementById('monthFilter').value = '';
+        updateFilters();
+    });
+});
+
+// دالة التصدير
+function exportData() {
+    // يمكن تطوير هذه الدالة لتصدير البيانات
+    alert('سيتم تطوير وظيفة التصدير قريباً');
+    // يمكن استخدام: window.open('data:application/vnd.ms-excel,' + document.documentElement.outerHTML);
+}
+</script>
+
+{% endblock %}

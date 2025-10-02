@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}إجراء على الأصل{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3>إجراء: {{ action_type }} على الأصل {{ asset.asset_name }}</h3>
+    <form method="POST">
+        <div class="mb-3">
+            <label for="details" class="form-label">ملاحظات إضافية (اختياري):</label>
+            <textarea name="details" id="details" class="form-control" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">تأكيد الإجراء</button>
+        <a href="{{ url_for('main.link_assets') }}" class="btn btn-secondary">إلغاء</a>
+    </form>
+</div>
+{% endblock %}

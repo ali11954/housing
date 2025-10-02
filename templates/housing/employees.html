@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}الموظفون{% endblock %}
+{% block content %}
+<h1>قائمة الموظفين</h1>
+<a href="{{ url_for('main.home') }}" class="btn btn-secondary mb-3">العودة للرئيسية</a>
+<a href="{{ url_for('main.employees_add') }}" class="btn btn-success mb-3">إضافة موظف جديد</a>
+
+<h3>ملخص الشركات وعدد الموظفين</h3>
+<table class="table table-bordered table-striped">
+  <thead class="table-info">
+    <tr>
+      <th>اسم الشركة</th>
+      <th>عدد الموظفين</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for company, company_emps in employees_by_company.items() %}
+      <tr>
+        <td>{{ company }}</td>
+        <td>{{ company_emps|length }}</td>
+      </tr>
+    {% endfor %}
+    <tr class="table-primary">
+      <td><strong>الإجمالي الكلي</strong></td>
+      <td><strong>{{ employees_by_company.values() | map('length') | sum }}</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+{# --- عرض الموظفين حسب الشركة مع تجاهل employee_code الفارغ --- #}
+{% for company, company_emps in employees_by_company.items() %}
+  <h3 class="mt-4">{{ company }} ({{ company_emps|length }} موظف/موظفين)</h3>
+  <table class="table table-striped table-bordered">
+    <thead class="table-primary">
+      <tr>
+        <th>كود الموظف</th>
+        <th>الاسم</th>
+        <th>الوظيفة</th>
+        <th>الإدارة</th>
+        <th>نوع الدوام</th>
+        <th>نوع التسكين</th>
+        <th>رقم السكن</th>
+        <th>الإجراءات</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for emp in company_emps|selectattr("employee_code")|sort(attribute='employee_code', reverse=True) %}
+        <tr>
+          <td>{{ emp.employee_code }}</td>
+          <td>{{ emp.name }}</td>
+          <td>{{ emp.job_title }}</td>
+          <td>{{ emp.department }}</td>
+          <td>{{ emp.work_type }}</td>
+          <td>{{ emp.housing_type }}</td>
+          <td>{{ emp_housing_numbers.get(emp.id, '') }}</td>
+          <td>
+            <a href="{{ url_for('main.employees_edit', employee_id=emp.id) }}" class="btn btn-sm btn-primary">تعديل</a>
+            <form action="{{ url_for('main.employees_delete', employee_id=emp.id) }}" method="POST" style="display:inline;">
+
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('هل أنت متأكد من حذف هذا الموظف؟')">حذف</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endfor %}
+
+{% endblock %}

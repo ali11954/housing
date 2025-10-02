@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h3 class="mb-4 text-center">تقرير الحضور - {{ selected_date.strftime('%Y-%m-%d') }}</h3>
+
+    <!-- نموذج اختيار التاريخ -->
+    <form method="get" class="mb-3 d-flex justify-content-center">
+        <input type="date" name="date" class="form-control w-auto me-2" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+        <button type="submit" class="btn btn-primary">عرض</button>
+    </form>
+ <!-- خلاصة عدد الموظفين -->
+    <p class="mt-3 text-end fw-bold">عدد الموظفين المسجلين: {{ records|length }}</p>
+
+    <!-- جدول بيانات الحضور -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped table-hover text-center">
+            <thead class="table-dark">
+                <tr>
+                    <th>كود الموظف</th>
+                    <th>الاسم</th>
+                    <th>الشركة</th>
+                    <th>الإدارة</th>
+                    <th>الوظيفة</th>
+                    <th>نوع الدوام</th>
+                    <th>تسجيل الدخول</th>
+                    <th>تسجيل الخروج</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rec in records %}
+                <tr>
+                    <td>{{ rec.employee_code }}</td>
+                    <td>{{ rec.name or '-' }}</td>
+                    <td>{{ rec.company_name or '-' }}</td>
+                    <td>{{ rec.department or '-' }}</td>
+                    <td>{{ rec.job_title or '-' }}</td>
+                    <td>{{ rec.work_type or '-' }}</td>
+                    <td>{{ rec.check_in or '-' }}</td>
+                    <td>{{ rec.check_out or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+</div>
+{% endblock %}

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تقرير السكنات PDF</title>
+<style>
+body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    margin: 20px;
+    background-color: #f9f9f9;
+    color: #000;
+}
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #0d6efd;
+}
+header img {
+    height: 50px;
+}
+header h1 {
+    margin: 0;
+    text-align: center;
+    font-size: 24px;
+    color: #0d6efd;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 30px;
+    background-color: #fff;
+}
+th, td {
+    border: 1px solid #000;
+    padding: 6px;
+    text-align: center;
+    font-size: 14px;
+}
+th {
+    background-color: #0d6efd;
+    color: white;
+}
+.occupied {
+    background-color: #dc3545;
+    color: white;
+    font-weight: bold;
+}
+.vacant {
+    background-color: #28a745;
+    color: white;
+    font-weight: bold;
+}
+footer {
+    text-align: center;
+    font-size: 12px;
+    margin-top: 40px;
+    color: #555;
+    border-top: 1px solid #0d6efd;
+    padding-top: 5px;
+}
+h2 {
+    color: #0d6efd;
+    margin-bottom: 10px;
+}
+h4 {
+    color: #0a58ca;
+    margin-bottom: 5px;
+}
+</style>
+</head>
+<body>
+
+<header>
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="شعار الشركة">
+    <h1>نظام إدارة السكنات</h1>
+    <div></div>
+</header>
+
+<h2>تقرير السكنات والموظفين</h2>
+
+{% for housing in housings %}
+<h4>السكن: {{ housing.name }}</h4>
+<table>
+    <thead>
+        <tr>
+            <th>الموظف الحالي</th>
+            <th>كود الموظف</th>
+            <th>المسمى الوظيفي</th>
+            <th>القسم</th>
+            <th>الغرفة</th>
+            <th>رقم السرير</th>
+            <th>الحالة</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for room in housing.rooms %}
+            {% for bed in room.beds %}
+            {% set emp = bed.current_employee() %}
+            <tr>
+                <td>{{ emp.name if emp else 'لا يوجد' }}</td>
+                <td>{{ emp.employee_code if emp else '' }}</td>
+                <td>{{ emp.job_title if emp else '' }}</td>
+                <td>{{ emp.department if emp else '' }}</td>
+                <td>{{ room.room_number }}</td>
+                <td>{{ bed.bed_number }}</td>
+                <td class="{{ 'occupied' if bed.is_occupied else 'vacant' }}">
+                    {{ 'مشغول' if bed.is_occupied else 'فارغ' }}
+                </td>
+            </tr>
+            {% endfor %}
+        {% endfor %}
+    </tbody>
+</table>
+{% endfor %}
+
+<footer>
+    تصميم وبرمجة: علي أحمد علي مبارك
+</footer>
+
+</body>
+</html>

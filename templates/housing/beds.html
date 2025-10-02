@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% block title %}قائمة الأسرّة - {{ room.room_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- بطاقة العنوان الرئيسي -->
+    <div class="card shadow-lg border-0 mb-4 gradient-bg">
+        <div class="card-body text-center py-4">
+            <div class="row align-items-center">
+                <div class="col-md-8 text-md-start text-center">
+                    <h1 class="display-6 mb-2 text-white">
+                        <i class="fas fa-bed me-2"></i>إدارة الأسرّة
+                    </h1>
+                    <p class="lead text-white mb-0">الغرفة: {{ room.room_number }}</p>
+                </div>
+                <div class="col-md-4 text-md-end text-center">
+                    {% if show_back_to_rooms_button %}
+                    <a href="{{ url_for('main.housing_rooms', housing_id=room.housing_unit_id) }}"
+                       class="btn btn-outline-light btn-lg mt-2">
+                        <i class="fas fa-arrow-right me-2"></i>العودة للغرف
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقة الإحصائيات -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card bg-primary text-white shadow-sm">
+                <div class="card-body text-center py-3">
+                    <i class="fas fa-bed fa-2x mb-2"></i>
+                    <!-- استخدام count() بدلاً من length -->
+                    <h3 class="mb-1">
+                        {% if beds is defined and beds %}
+                            {% if beds.__class__.__name__ == 'AppenderQuery' %}
+                                {{ beds.count() }}
+                            {% else %}
+                                {{ beds|length }}
+                            {% endif %}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </h3>
+                    <p class="mb-0">إجمالي الأسرّة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-success text-white shadow-sm">
+                <div class="card-body text-center py-3">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <h3 class="mb-1">
+                        {% if beds is defined and beds %}
+                            {% if beds.__class__.__name__ == 'AppenderQuery' %}
+                                {{ beds.filter_by(is_occupied=false).count() }}
+                            {% else %}
+                                {{ beds|selectattr('is_occupied', 'equalto', false)|list|length }}
+                            {% endif %}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </h3>
+                    <p class="mb-0">أسرّة متاحة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-warning text-white shadow-sm">
+                <div class="card-body text-center py-3">
+                    <i class="fas fa-user-clock fa-2x mb-2"></i>
+                    <h3 class="mb-1">
+                        {% if beds is defined and beds %}
+                            {% if beds.__class__.__name__ == 'AppenderQuery' %}
+                                {{ beds.filter_by(is_occupied=true).count() }}
+                            {% else %}
+                                {{ beds|selectattr('is_occupied', 'equalto', true)|list|length }}
+                            {% endif %}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </h3>
+                    <p class="mb-0">أسرّة مشغولة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-info text-white shadow-sm">
+                <div class="card-body text-center py-3">
+                    <i class="fas fa-percentage fa-2x mb-2"></i>
+                    <h3 class="mb-1">
+                        {% if beds is defined and beds %}
+                            {% set total_beds = beds.count() if beds.__class__.__name__ == 'AppenderQuery' else beds|length %}
+                            {% set occupied_beds = beds.filter_by(is_occupied=true).count() if beds.__class__.__name__ == 'AppenderQuery' else beds|selectattr('is_occupied', 'equalto', true)|list|length %}
+                            {% if total_beds > 0 %}
+                                {{ ((occupied_beds / total_beds) * 100)|round|int }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </h3>
+                    <p class="mb-0">نسبة الإشغال</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- باقي الكود بدون تغيير -->
+    <!-- بطاقة التحكم -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-primary">
+                <i class="fas fa-list me-2"></i>قائمة الأسرّة
+            </h5>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary" id="filterAvailable">
+                    <i class="fas fa-filter me-1"></i>عرض المتاح فقط
+                </button>
+                <a href="{{ url_for('main.bed_add', room_id=room.id) }}" class="btn btn-success">
+                    <i class="fas fa-plus-circle me-2"></i>إضافة سرير جديد
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered mb-0" id="bedsTable">
+                    <thead class="table-primary sticky-top">
+                        <tr>
+                            <th width="15%" class="bg-gradient-th text-center">
+                                <i class="fas fa-hashtag me-1"></i>رقم السرير
+                            </th>
+                            <th width="15%" class="bg-gradient-th text-center">
+                                <i class="fas fa-door-open me-1"></i>رقم الغرفة
+                            </th>
+                            <th width="20%" class="bg-gradient-th text-center">
+                                <i class="fas fa-tag me-1"></i>نوع السرير
+                            </th>
+                            <th width="15%" class="bg-gradient-th text-center">
+                                <i class="fas fa-circle me-1"></i>الحالة
+                            </th>
+                            <th width="20%" class="bg-gradient-th text-center">
+                                <i class="fas fa-calendar me-1"></i>تاريخ الإضافة
+                            </th>
+                            <th width="15%" class="bg-gradient-th text-center">
+                                <i class="fas fa-cogs me-1"></i>الإجراءات
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- تعديل طريقة التكرار للتعامل مع AppenderQuery -->
+                        {% if beds is defined and beds %}
+                            {% for bed in beds %}
+                            <tr class="bed-row {% if bed.is_occupied %}occupied-bed{% else %}available-bed{% endif %}"
+                                data-status="{% if bed.is_occupied %}occupied{% else %}available{% endif %}">
+                                <td class="text-center fw-bold bed-number">{{ bed.bed_number }}</td>
+                                <td class="text-center">{{ room.room_number }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary bed-type">{{ bed.bed_type }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge {% if bed.is_occupied %}bg-warning{% else %}bg-success{% endif %} status-badge">
+                                        <i class="fas {% if bed.is_occupied %}fa-user-clock{% else %}fa-check-circle{% endif %} me-1"></i>
+                                        {{ 'مشغول' if bed.is_occupied else 'متاح' }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    {% if bed.created_at %}
+                                        <small class="text-muted">{{ bed.created_at.strftime('%Y-%m-%d') }}</small>
+                                    {% else %}
+                                        <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{{ url_for('main.bed_edit', bed_id=bed.id) }}"
+                                           class="btn btn-outline-primary"
+                                           title="تعديل السرير">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button"
+                                                class="btn btn-outline-warning toggle-status"
+                                                data-bed-id="{{ bed.id }}"
+                                                data-current-status="{{ bed.is_occupied }}"
+                                                title="تغيير الحالة">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                        <form action="{{ url_for('main.bed_delete', bed_id=bed.id) }}"
+                                              method="POST"
+                                              class="d-inline">
+                                            <button type="submit"
+                                                    class="btn btn-outline-danger"
+                                                    onclick="return confirmDelete()"
+                                                    title="حذف السرير">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <div class="empty-state">
+                                    <i class="fas fa-bed fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">لا توجد أسرّة</h5>
+                                    <p class="text-muted">لم يتم إضافة أي أسرّة لهذه الغرفة بعد</p>
+                                    <a href="{{ url_for('main.bed_add', room_id=room.id) }}" class="btn btn-primary mt-2">
+                                        <i class="fas fa-plus me-1"></i>إضافة أول سرير
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- باقي الكود بدون تغيير -->
+{% endblock %}

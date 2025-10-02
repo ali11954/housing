@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+{% block title %}تقرير أصول الغرف{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- رأس الصفحة -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0 text-primary">تقرير أصول الغرف</h2>
+
+        <!-- أزرار التصدير -->
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('main.export_linked_assets_pdf') }}?{{ request.query_string.decode() }}"
+               class="btn btn-danger">
+                <i class="fas fa-file-pdf me-1"></i> تصدير PDF
+            </a>
+            <a href="{{ url_for('main.export_linked_assets_excel') }}?{{ request.query_string.decode() }}"
+               class="btn btn-success">
+                <i class="fas fa-file-excel me-1"></i> تصدير Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- بطاقة الفلاتر -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>فلاتر التقرير</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">الوحدة السكنية</label>
+                    <select name="housing" class="form-select">
+                        <option value="">جميع الوحدات</option>
+                        {% for h in housings %}
+                        <option value="{{ h }}" {% if request.args.get('housing') == h %}selected{% endif %}>{{ h }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">الغرفة</label>
+                    <input type="text" name="room" class="form-control"
+                           placeholder="أدخل اسم الغرفة" value="{{ request.args.get('room','') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">حالة الأصل</label>
+                    <select name="status" class="form-select">
+                        <option value="">جميع الحالات</option>
+                        <option value="جديد" {% if request.args.get('status') == 'جديد' %}selected{% endif %}>جديد</option>
+                        <option value="مستعمل" {% if request.args.get('status') == 'مستعمل' %}selected{% endif %}>مستعمل</option>
+                        <option value="تالف" {% if request.args.get('status') == 'تالف' %}selected{% endif %}>تالف</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="d-grid w-100">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i> تطبيق الفلاتر
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- إظهار الفلاتر النشطة -->
+            {% if request.args.get('housing') or request.args.get('room') or request.args.get('status') %}
+            <div class="mt-3 p-2 bg-light rounded">
+                <small class="text-muted">الفلاتر المطبقة:</small>
+                {% if request.args.get('housing') %}
+                <span class="badge bg-secondary me-1">السكن: {{ request.args.get('housing') }}</span>
+                {% endif %}
+                {% if request.args.get('room') %}
+                <span class="badge bg-secondary me-1">الغرفة: {{ request.args.get('room') }}</span>
+                {% endif %}
+                {% if request.args.get('status') %}
+                <span class="badge bg-secondary me-1">الحالة: {{ request.args.get('status') }}</span>
+                {% endif %}
+                <a href="{{ url_for('main.room_assets_report') }}" class="badge bg-danger text-decoration-none">إلغاء الكل</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+   <!-- إحصائيات سريعة -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ total_assets_count }}</h4>
+                        <small>إجمالي الأصول المرتبطة</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-cube fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ total_housings }}</h4>
+                        <small>عدد الوحدات السكنية</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-home fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ total_rooms }}</h4>
+                        <small>عدد الغرف</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-door-open fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ unlinked_assets_count }}</h4>
+                        <small>أصول غير مرتبطة</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-unlink fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- تقرير الأصول -->
+    {% for housing, rooms in report_data.items() %}
+    <div class="housing-section mb-5" data-housing="{{ housing }}">
+        <!-- رأس قسم السكن -->
+        <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
+            <div>
+                <h4 class="mb-0">
+                    <i class="fas fa-home me-2 text-primary"></i>الوحدة السكنية: {{ housing }}
+                </h4>
+                <small class="text-muted">{{ rooms|length }} غرفة</small>
+            </div>
+            <div class="text-end">
+                <span class="badge bg-primary fs-6">إجمالي الأصول: {{ summary[housing]['total'] }}</span>
+            </div>
+        </div>
+
+        {% for room, assets in rooms.items() %}
+        <!-- قسم الغرفة -->
+        <div class="room-section mb-4" data-room="{{ room }}">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="text-success">
+                    <i class="fas fa-door-open me-2"></i>الغرفة: {{ room }}
+                </h5>
+                <span class="badge bg-success fs-6">{{ assets|length }} أصل</span>
+            </div>
+
+            <!-- جدول أصول الغرفة -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover table-sm">
+                    <thead class="table-dark">
+                        <tr>
+                            <th width="100">رقم الأصل</th>
+                            <th>اسم الأصل</th>
+                            <th width="120">نوع الأصل</th>
+                            <th width="100">حالة الأصل</th>
+                            <th width="100">السرير</th>
+                            <th width="120">تاريخ الربط</th>
+                            <th width="120">تاريخ الشراء</th>
+                            <th width="100">العمر (سنوات)</th>
+                            <th width="80">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in assets %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-secondary">{{ item.asset.asset_number }}</span>
+                            </td>
+                            <td>{{ item.asset.asset_name }}</td>
+                            <td>
+                                <span class="badge
+                                    {% if item.asset.asset_type == 'أثاث' %}bg-info
+                                    {% elif item.asset.asset_type == 'أجهزة كهربائية' %}bg-warning
+                                    {% elif item.asset.asset_type == 'إلكترونيات' %}bg-success
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ item.asset.asset_type }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge
+                                    {% if item.asset.status == 'جديد' %}bg-success
+                                    {% elif item.asset.status == 'مستعمل' %}bg-warning
+                                    {% elif item.asset.status == 'تالف' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ item.asset.status }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if item.bed %}
+                                <span class="badge bg-light text-dark">{{ item.bed }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.asset_link.link_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ item.asset.purchase_date.strftime('%Y-%m-%d') if item.asset.purchase_date else "غير محدد" }}</td>
+                            <td>
+                                <span class="badge
+                                    {% if item.age > 5 %}bg-danger
+                                    {% elif item.age > 3 %}bg-warning
+                                    {% else %}bg-success{% endif %}">
+                                    {{ item.age }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary"
+                                        title="عرض التفاصيل"
+                                        onclick="showAssetDetails({{ item.asset.id }})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ملخص أصول الغرفة -->
+            <div class="mt-2">
+                <p class="fw-bold text-muted">توزيع أنواع الأصول في الغرفة:</p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% set room_assets_by_type = {} %}
+                    {% for asset in assets %}
+                        {% set asset_type = asset.asset.asset_type %}
+                        {% if room_assets_by_type.update({asset_type: room_assets_by_type.get(asset_type, 0) + 1}) %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% for asset_type, count in room_assets_by_type.items() %}
+                    <span class="badge bg-light text-dark border">
+                        {{ asset_type }}: {{ count }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- فاصل بين الغرف (ليس للأخيرة) -->
+        {% if not loop.last %}
+        <hr class="my-4">
+        {% endif %}
+        {% endfor %}
+
+        <!-- ملخص السكن -->
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">ملخص الوحدة السكنية: {{ housing }}</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="fw-bold">إجمالي الأصول: {{ summary[housing]['total'] }}</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for asset_name, count in summary[housing]['by_type'].items() %}
+                            <span class="badge bg-primary">{{ asset_name }}: {{ count }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <canvas id="chart-{{ housing|replace(' ', '-') }}" width="200" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فاصل بين الوحدات السكنية (ليس للأخيرة) -->
+    {% if not loop.last %}
+    <hr class="my-5" style="border-top: 2px solid #dee2e6;">
+    {% endif %}
+    {% endfor %}
+
+    <!-- قسم التحليل بالذكاء الاصطناعي -->
+    <div class="card mt-5">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-robot me-2"></i>تحليل ومقترحات بالذكاء الاصطناعي</h5>
+        </div>
+        <div class="card-body">
+            <div class="ai-analysis">
+                {% for line in ai_analysis %}
+                <div class="d-flex mb-2">
+                    <i class="fas fa-circle text-info me-2 mt-1" style="font-size: 0.5rem;"></i>
+                    <span>{{ line }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نموذج تفاصيل الأصل -->
+<div class="modal fade" id="assetDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تفاصيل الأصل</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="assetDetailsContent">
+                <!-- سيتم ملؤه بالجافاسكريبت -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// وظيفة لعرض تفاصيل الأصل
+function showAssetDetails(assetId) {
+    // هنا يمكنك إضافة استدعاء AJAX لجلب تفاصيل الأصل
+    $('#assetDetailsContent').html(`
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">جاري التحميل...</span>
+            </div>
+            <p>جاري تحميل تفاصيل الأصل...</p>
+        </div>
+    `);
+    $('#assetDetailsModal').modal('show');
+
+    // محاكاة لجلب البيانات (استبدل هذا باستدعاء حقيقي)
+    setTimeout(() => {
+        $('#assetDetailsContent').html(`
+            <p>تفاصيل الأصل رقم ${assetId}</p>
+            <p>هذه منطقة لعرض التفاصيل الكاملة للأصل.</p>
+        `);
+    }, 1000);
+}
+
+// تفعيل أداة التلميح
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+
+<style>
+.housing-section, .room-section {
+    transition: all 0.3s ease;
+}
+
+.table th {
+    font-weight: 600;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+@media (max-width: 768px) {
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .btn-group {
+        margin-top: 1rem;
+        width: 100%;
+    }
+
+    .btn-group .btn {
+        flex: 1;
+    }
+
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+
+    .housing-section .row > div {
+        margin-bottom: 0.5rem;
+    }
+
+    .card-body .row {
+        margin-bottom: 1rem;
+    }
+}
+</style>
+{% endblock %}

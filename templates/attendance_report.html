@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}تقرير الحضور{% endblock %}
+
+{% block content %}
+
+<h2 class="mb-4">تقرير حضور الموظفين</h2>
+
+<!-- اختيار التاريخ وأزرار التحكم -->
+<form method="get" class="mb-3 d-flex align-items-center gap-2 flex-wrap">
+    <label class="fw-bold">اختر تاريخ: </label>
+    <input type="date" name="date" value="{{ selected_date }}" class="form-control form-control-sm" style="max-width:200px;">
+    <button class="btn btn-primary btn-sm">عرض</button>
+    <button type="button" class="btn btn-warning btn-sm" onclick="refreshPage()">تحديث البيانات</button>
+    <button type="button" class="btn btn-success btn-sm" onclick="exportExcel()">تصدير Excel</button>
+    <button type="button" class="btn btn-danger btn-sm" onclick="exportPDF()">تصدير PDF</button>
+</form>
+
+<!-- ملخص أعلى الجدول -->
+<div class="alert alert-info fw-bold" role="alert">
+    إجمالي السجلات في هذا التاريخ: {{ results|length }}
+</div>
+
+<!-- جدول الحضور -->
+<h2 class="mb-4">تقرير الحضور</h2>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>كود الموظف</th>
+            <th>اسم الموظف</th>
+            <th>التاريخ</th>
+            <th>دخول</th>
+            <th>خروج</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in results %}
+        <tr>
+            <td>{{ row.employee_code }}</td>
+            <td>{{ row.name }}</td>
+            <td>{{ row.date }}</td>
+            <td>{{ row.check_in or '-' }}</td>
+            <td>{{ row.check_out or '-' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="5" class="text-center text-danger">لا توجد بيانات</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+</div>
+
+<script>
+    function refreshPage() {
+        location.reload();
+    }
+
+    function exportExcel() {
+        alert("ميزة تصدير Excel قيد التطوير");
+    }
+
+    function exportPDF() {
+        alert("ميزة تصدير PDF قيد التطوير");
+    }
+</script>
+
+{% endblock %}

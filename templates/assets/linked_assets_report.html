@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% block title %}تقرير الأصول المرتبطة{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- رأس الصفحة مع العنوان وأزرار التصدير -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">الأصول المرتبطة بالسكن</h3>
+
+        <!-- أزرار التصدير -->
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('main.export_linked_assets_pdf') }}" class="btn btn-danger">
+                <i class="fas fa-file-pdf me-1"></i> تصدير PDF
+            </a>
+            <a href="{{ url_for('main.export_linked_assets_excel') }}" class="btn btn-success">
+                <i class="fas fa-file-excel me-1"></i> تصدير Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- لوحة التحكم بالتصفية والبحث -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="housingFilter" class="form-label">تصفية حسب السكن</label>
+                    <select class="form-select" id="housingFilter">
+                        <option value="all">جميع المساكن</option>
+                        {% for housing in summary.keys() %}
+                        <option value="{{ housing }}">{{ housing }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="assetTypeFilter" class="form-label">تصفية حسب نوع الأصل</label>
+                    <select class="form-select" id="assetTypeFilter">
+                        <option value="all">جميع الأنواع</option>
+                        <!-- سيتم ملء هذا ديناميكيًا بالجافاسكريبت -->
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="searchInput" class="form-label">بحث</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="ابحث في الأصول...">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% for housing, assets_count in summary.items() %}
+    <!-- قسم لكل سكن -->
+    <div class="housing-section mb-5" data-housing="{{ housing }}">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="text-primary">الوحدة السكنية: {{ housing }}</h4>
+            <span class="badge bg-primary fs-6">عدد الأصول: {{ assets_count.values() | sum }}</span>
+        </div>
+
+        <!-- جدول الأصول -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th data-sort="asset_number">أصل <i class="fas fa-sort ms-1"></i></th>
+                        <th data-sort="asset_name">اسم الأصل <i class="fas fa-sort ms-1"></i></th>
+                        <th data-sort="asset_type">نوع الأصل <i class="fas fa-sort ms-1"></i></th>
+                        <th data-sort="status">حالة الأصل <i class="fas fa-sort ms-1"></i></th>
+                        <th data-sort="housing">السكن الحالي <i class="fas fa-sort ms-1"></i></th>
+                        <th data-sort="room">الغرفة الحالية <i class="fas fa-sort ms-1"></i></th>
+                        <th data-sort="bed">السرير الحالي <i class="fas fa-sort ms-1"></i></th>
+                        <th data-sort="link_date">تاريخ آخر نقل/ربط <i class="fas fa-sort ms-1"></i></th>
+                        <th data-sort="purchase_date">تاريخ الشراء <i class="fas fa-sort ms-1"></i></th>
+                        <th data-sort="age">عمر الأصل (سنوات) <i class="fas fa-sort ms-1"></i></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in (asset_links | selectattr("housing","equalto",housing) | sort(attribute="room", reverse=true)) %}
+                    <tr>
+                        <td><span class="badge bg-secondary">{{ item.asset.asset_number }}</span></td>
+                        <td>{{ item.asset.asset_name }}</td>
+                        <td>
+                            <span class="badge
+                                {% if item.asset.asset_type == 'أثاث' %}bg-info
+                                {% elif item.asset.asset_type == 'أجهزة كهربائية' %}bg-warning
+                                {% elif item.asset.asset_type == 'إلكترونيات' %}bg-success
+                                {% else %}bg-secondary{% endif %}">
+                                {{ item.asset.asset_type }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge
+                                {% if item.asset.status == 'جيد' %}bg-success
+                                {% elif item.asset.status == 'يحتاج صيانة' %}bg-warning
+                                {% elif item.asset.status == 'معطل' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ item.asset.status }}
+                            </span>
+                        </td>
+
+                        {% set last_action = item.asset.actions|sort(attribute='action_date')|last %}
+                        {% if last_action and last_action.action_type == 'تعديل/نقل' %}
+                            <td>{{ last_action.new_housing }}</td>
+                            <td>{{ last_action.new_room }}</td>
+                            <td>{{ last_action.new_bed }}</td>
+                            <td>{{ last_action.action_date.strftime('%Y-%m-%d') }}</td>
+                        {% else %}
+                            <td>{{ item.housing }}</td>
+                            <td>{{ item.room }}</td>
+                            <td>{{ item.bed }}</td>
+                            <td>{{ item.asset_link.link_date.strftime('%Y-%m-%d') }}</td>
+                        {% endif %}
+
+                        <td>{{ item.asset.purchase_date.strftime('%Y-%m-%d') if item.asset.purchase_date else "غير محدد" }}</td>
+                        <td>
+                            <span class="badge
+                                {% if item.age > 5 %}bg-danger
+                                {% elif item.age > 3 %}bg-warning
+                                {% else %}bg-success{% endif %}">
+                                {{ item.age }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ملخص الأصول -->
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">خلاصة الأصول للوحدة السكنية: {{ housing }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for asset_name, count in assets_count.items() %}
+                    <div class="col-md-3 col-sm-6 mb-2">
+                        <div class="d-flex justify-content-between align-items-center p-2 border rounded">
+                            <span>{{ asset_name }}</span>
+                            <span class="badge bg-primary rounded-pill">{{ count }} قطعة</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فاصل بين الأقسام -->
+    {% if not loop.last %}
+    <hr class="my-5" style="border-top: 2px dashed #ccc;">
+    {% endif %}
+    {% endfor %}
+
+    <!-- تحليل الذكاء الاصطناعي -->
+    <div class="card mt-5">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-robot me-2"></i>تحليل ومقترحات بالذكاء الاصطناعي</h5>
+        </div>
+        <div class="card-body">
+            <ul class="list-group list-group-flush">
+                {% for line in ai_analysis %}
+                <li class="list-group-item d-flex">
+                    <i class="fas fa-circle text-info me-2 mt-1" style="font-size: 0.5rem;"></i>
+                    <span>{{ line }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- إضافة الجافاسكريبت للتفاعلية -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // جمع أنواع الأصول الفريدة لملء قائمة التصفية
+    const assetTypes = new Set();
+    document.querySelectorAll('tbody tr').forEach(row => {
+        const typeCell = row.cells[2]; // خلية نوع الأصل
+        if (typeCell) {
+            const type = typeCell.textContent.trim();
+            if (type) assetTypes.add(type);
+        }
+    });
+
+    // ملء قائمة التصفية بأنواع الأصول
+    const assetTypeFilter = document.getElementById('assetTypeFilter');
+    assetTypes.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = type;
+        assetTypeFilter.appendChild(option);
+    });
+
+    // وظيفة التصفية
+    function filterTable() {
+        const housingFilter = document.getElementById('housingFilter').value;
+        const assetTypeFilterValue = document.getElementById('assetTypeFilter').value;
+        const searchText = document.getElementById('searchInput').value.toLowerCase();
+
+        document.querySelectorAll('.housing-section').forEach(section => {
+            const housing = section.getAttribute('data-housing');
+            let showSection = (housingFilter === 'all' || housingFilter === housing);
+
+            if (showSection) {
+                section.style.display = 'block';
+
+                // تصفية الصفوف داخل القسم
+                section.querySelectorAll('tbody tr').forEach(row => {
+                    const rowText = row.textContent.toLowerCase();
+                    const assetType = row.cells[2].textContent.trim();
+
+                    const matchesSearch = searchText === '' || rowText.includes(searchText);
+                    const matchesAssetType = assetTypeFilterValue === 'all' || assetType === assetTypeFilterValue;
+
+                    row.style.display = (matchesSearch && matchesAssetType) ? '' : 'none';
+                });
+            } else {
+                section.style.display = 'none';
+            }
+        });
+    }
+
+    // إضافة مستمعي الأحداث لعناصر التصفية
+    document.getElementById('housingFilter').addEventListener('change', filterTable);
+    document.getElementById('assetTypeFilter').addEventListener('change', filterTable);
+    document.getElementById('searchInput').addEventListener('input', filterTable);
+
+    // وظيفة الترتيب للجدول
+    document.querySelectorAll('th[data-sort]').forEach(header => {
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', function() {
+            const table = this.closest('table');
+            const tbody = table.querySelector('tbody');
+            const columnIndex = Array.from(this.parentNode.cells).indexOf(this);
+            const rows = Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])'));
+
+            // تحديد اتجاه الترتيب
+            const isAscending = !this.classList.contains('asc');
+            this.classList.toggle('asc', isAscending);
+            this.classList.toggle('desc', !isAscending);
+
+            // إعادة تعليمات الترتيب لجميع الرؤوس
+            table.querySelectorAll('th[data-sort]').forEach(th => {
+                if (th !== this) {
+                    th.classList.remove('asc', 'desc');
+                }
+            });
+
+            // ترتيب الصفوف
+            rows.sort((a, b) => {
+                const aValue = a.cells[columnIndex].textContent.trim();
+                const bValue = b.cells[columnIndex].textContent.trim();
+
+                // محاولة تحويل القيم إلى أرقام إذا أمكن
+                const aNum = parseFloat(aValue);
+                const bNum = parseFloat(bValue);
+
+                let comparison = 0;
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    comparison = aNum - bNum;
+                } else {
+                    comparison = aValue.localeCompare(bValue, 'ar');
+                }
+
+                return isAscending ? comparison : -comparison;
+            });
+
+            // إعادة ترتيب الصفوف في الجدول
+            rows.forEach(row => tbody.appendChild(row));
+        });
+    });
+});
+</script>
+
+<style>
+/* تخصيصات إضافية للتصميم */
+.housing-section {
+    transition: all 0.3s ease;
+}
+
+.table th {
+    cursor: pointer;
+    user-select: none;
+}
+
+.table th.asc i.fa-sort::before {
+    content: "\f0de"; /* سهم للأعلى */
+}
+
+.table th.desc i.fa-sort::before {
+    content: "\f0dd"; /* سهم للأسفل */
+}
+
+.badge {
+    font-size: 0.8em;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+@media (max-width: 768px) {
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .btn-group {
+        margin-top: 1rem;
+        align-self: flex-end;
+    }
+
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+
+    .housing-section .row > div {
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

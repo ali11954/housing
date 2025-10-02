@@ -1,0 +1,76 @@
+\{% extends "base.html" %}
+{% block title %}تقرير التنقلات التاريخي{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-3">التقرير التاريخي للربط والتنقلات</h3>
+
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <input type="text" id="searchEmployee" class="form-control" placeholder="بحث باسم الموظف أو الكود">
+        </div>
+        <div class="col-md-4">
+            <input type="date" id="filterDate" class="form-control">
+        </div>
+    </div>
+
+    <table class="table table-bordered table-striped text-center">
+        <thead class="table-primary">
+            <tr>
+                <th>الكود الوظيفي</th>
+                <th>اسم الموظف</th>
+                <th>الوظيفة</th>
+                <th>الإدارة</th>
+                <th>السرير القديم</th>
+                <th>الغرفة القديمة</th>
+                <th>الوحدة القديمة</th>
+                <th>تاريخ النقل</th>
+                <th>السرير الجديد</th>
+                <th>الغرفة الجديدة</th>
+                <th>الوحدة الجديدة</th>
+            </tr>
+        </thead>
+        <tbody id="transfersTable">
+            {% for t in transfers %}
+            <tr>
+                <td>{{ t.employee.employee_code if t.employee else '-' }}</td>
+                <td>{{ t.employee.name if t.employee else '-' }}</td>
+                <td>{{ t.employee.job_title if t.employee else '-' }}</td>
+                <td>{{ t.employee.department if t.employee else '-' }}</td>
+
+                <td>{{ t.from_bed.bed_number if t.from_bed else '-' }}</td>
+                <td>{{ t.from_bed.room.room_number if t.from_bed and t.from_bed.room else '-' }}</td>
+                <td>{{ t.from_bed.room.housing_unit.name if t.from_bed and t.from_bed.room and t.from_bed.room.housing_unit else '-' }}</td>
+
+                <td>{{ t.transfer_date.strftime("%Y-%m-%d") if t.transfer_date else '-' }}</td>
+
+                <td>{{ t.to_bed.bed_number if t.to_bed else '-' }}</td>
+                <td>{{ t.to_bed.room.room_number if t.to_bed and t.to_bed.room else '-' }}</td>
+                <td>{{ t.to_bed.room.housing_unit.name if t.to_bed and t.to_bed.room and t.to_bed.room.housing_unit else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // فلترة البحث حسب الموظف أو الكود
+    document.getElementById('searchEmployee').addEventListener('keyup', function() {
+        let value = this.value.toLowerCase();
+        let rows = document.querySelectorAll('#transfersTable tr');
+        rows.forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(value) ? '' : 'none';
+        });
+    });
+
+    // فلترة حسب التاريخ
+    document.getElementById('filterDate').addEventListener('change', function() {
+        let value = this.value;
+        let rows = document.querySelectorAll('#transfersTable tr');
+        rows.forEach(row => {
+            let dateCell = row.cells[7].textContent;
+            row.style.display = dateCell.includes(value) ? '' : 'none';
+        });
+    });
+</script>
+{% endblock %}

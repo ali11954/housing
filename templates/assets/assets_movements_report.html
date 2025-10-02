@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %} تقرير تنقلات الأصول {% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4">تقرير تنقلات الأصول</h3>
+
+    <form method="get" class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label for="action_type" class="form-label">نوع العملية:</label>
+            <select name="action_type" id="action_type" class="form-select" onchange="this.form.submit()">
+                <option value="all" {% if action_type_filter == 'all' %}selected{% endif %}>جميع العمليات</option>
+                <option value="ربط" {% if action_type_filter == 'ربط' %}selected{% endif %}>ربط</option>
+                <option value="نقل" {% if action_type_filter == 'نقل' %}selected{% endif %}>نقل</option>
+                <option value="اتلاف" {% if action_type_filter == 'اتلاف' %}selected{% endif %}>اتلاف</option>
+                <option value="تعديل" {% if action_type_filter == 'تعديل' %}selected{% endif %}>تعديل</option>
+            </select>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped table-hover text-center">
+            <thead class="table-dark">
+                <tr>
+                    <th>رقم الأصل</th>
+                    <th>اسم الأصل</th>
+                    <th>نوع العملية</th>
+                    <th>تاريخ العملية</th>
+                    <th>السكن</th>
+                    <th>الغرفة</th>
+                    <th>السرير</th>
+                    <th>تاريخ الربط</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for action in actions %}
+                <tr>
+                    <td>{{ action.asset.asset_number }}</td>
+                    <td>{{ action.asset.asset_name }}</td>
+                    <td>{{ action.action_type }}</td>
+                    <td>{{ action.action_date.strftime('%Y-%m-%d') if action.action_date else '' }}</td>
+                    <td>{{ action.asset.asset_links[-1].housing_unit.name if action.asset.asset_links else "بدون سكن" }}</td>
+                    <td>{{ action.asset.asset_links[-1].room.room_number if action.asset.asset_links and action.asset.asset_links[-1].room else "بدون غرفة" }}</td>
+                    <td>{{ action.asset.asset_links[-1].bed.bed_number if action.asset.asset_links and action.asset.asset_links[-1].bed else "بدون سرير" }}</td>
+                    <td>{{ action.asset.asset_links[-1].link_date.strftime('%Y-%m-%d') if action.asset.asset_links else "" }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center">لا توجد عمليات</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

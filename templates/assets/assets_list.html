@@ -1,0 +1,556 @@
+{% extends 'base.html' %}
+
+{% block title %}إدارة الأصول{% endblock %}
+
+{% block content %}
+<div class="container-custom py-4 fade-in">
+
+    <!-- شريط العنوان والإحصائيات -->
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold text-gradient mb-3">لوحة إدارة الأصول</h1>
+        <p class="lead text-muted">نظام متكامل لتتبع وإدارة جميع أصول الشركة بكفاءة عالية</p>
+    </div>
+
+    <!-- مؤشرات الأداء الرئيسية -->
+    <div class="row mb-5 g-4">
+        <div class="col-xl-3 col-lg-6">
+            <div class="kpi-card success">
+                <div class="kpi-icon">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <div class="kpi-content">
+                    <h3 class="kpi-value" data-target="152">0</h3>
+                    <p class="kpi-label">إجمالي الأصول</p>
+                    <div class="kpi-trend">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>12% زيادة</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6">
+            <div class="kpi-card primary">
+                <div class="kpi-icon">
+                    <i class="fas fa-home"></i>
+                </div>
+                <div class="kpi-content">
+                    <h3 class="kpi-value" data-target="12">0</h3>
+                    <p class="kpi-label">السكنات المرتبطة</p>
+                    <div class="kpi-trend">
+                        <i class="fas fa-check-circle"></i>
+                        <span>100% نشطة</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6">
+            <div class="kpi-card warning">
+                <div class="kpi-icon">
+                    <i class="fas fa-tools"></i>
+                </div>
+                <div class="kpi-content">
+                    <h3 class="kpi-value" data-target="8">0</h3>
+                    <p class="kpi-label">تحت الصيانة</p>
+                    <div class="kpi-trend">
+                        <i class="fas fa-clock"></i>
+                        <span>3 تحت الإصلاح</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-6">
+            <div class="kpi-card danger">
+                <div class="kpi-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="kpi-content">
+                    <h3 class="kpi-value" data-target="5">0</h3>
+                    <p class="kpi-label">أصول متعطلة</p>
+                    <div class="kpi-trend">
+                        <i class="fas fa-arrow-down"></i>
+                        <span>يتطلب اهتمام</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- البطاقات الرئيسية -->
+    <div class="row g-4 justify-content-center mb-5">
+
+        <!-- إضافة أصل -->
+        <div class="col-xl-4 col-lg-6">
+            <a href="{{ url_for('main.add_asset') }}" class="card main-action-card success">
+                <div class="card-body text-center p-5">
+                    <div class="action-icon mb-4">
+                        <i class="fas fa-plus-circle"></i>
+                    </div>
+                    <h4 class="card-title fw-bold mb-3">إضافة أصل جديد</h4>
+                    <p class="card-text text-muted mb-4">تسجيل أصل جديد في النظام مع تفاصيل كاملة</p>
+                    <div class="action-badge">
+                        <span class="badge">جديد</span>
+                    </div>
+                    <div class="action-arrow">
+                        <i class="fas fa-arrow-left"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- ربط الأصول بالسكنات -->
+        <div class="col-xl-4 col-lg-6">
+            <a href="{{ url_for('main.link_asset_to_housing') }}" class="card main-action-card primary">
+                <div class="card-body text-center p-5">
+                    <div class="action-icon mb-4">
+                        <i class="fas fa-link"></i>
+                    </div>
+                    <h4 class="card-title fw-bold mb-3">ربط الأصول بالسكنات</h4>
+                    <p class="card-text text-muted mb-4">توزيع الأصول على السكنات بشكل منظم</p>
+                    <div class="action-badge">
+                        <span class="badge">120 مرتبط</span>
+                    </div>
+                    <div class="action-arrow">
+                        <i class="fas fa-arrow-left"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- تقرير الأصول -->
+        <div class="col-xl-4 col-lg-6">
+            <a href="{{ url_for('main.assets_reports_dashboard') }}" class="card main-action-card warning">
+                <div class="card-body text-center p-5">
+                    <div class="action-icon mb-4">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h4 class="card-title fw-bold mb-3">تقرير الأصول</h4>
+                    <p class="card-text text-muted mb-4">عرض حالة الأصول وتحليلات متقدمة</p>
+                    <div class="action-badge">
+                        <span class="badge">25 تقرير</span>
+                    </div>
+                    <div class="action-arrow">
+                        <i class="fas fa-arrow-left"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+    </div>
+
+    <!-- قسم الإحصائيات التفصيلية -->
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card stats-card">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="fw-bold d-flex align-items-center">
+                        <i class="fas fa-chart-line me-2 text-primary"></i>
+                        توزيع الأصول خلال الأشهر
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-wrapper">
+                        <canvas id="assetsTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card stats-card">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="fw-bold d-flex align-items-center">
+                        <i class="fas fa-pie-chart me-2 text-success"></i>
+                        توزيع الأصول حسب النوع
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-wrapper">
+                        <canvas id="assetsDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- روابط سريعة -->
+    <div class="text-center mt-5">
+        <div class="quick-links">
+            <a href="#" class="quick-link">
+                <i class="fas fa-cog"></i>
+                <span>الإعدادات</span>
+            </a>
+            <a href="#" class="quick-link">
+                <i class="fas fa-download"></i>
+                <span>تصدير البيانات</span>
+            </a>
+            <a href="#" class="quick-link">
+                <i class="fas fa-question-circle"></i>
+                <span>المساعدة</span>
+            </a>
+            <a href="#" class="quick-link">
+                <i class="fas fa-history"></i>
+                <span>سجل التغييرات</span>
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    /* تحسينات التصميم */
+    .text-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* بطاقات المؤشرات */
+    .kpi-card {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.4s ease;
+        position: relative;
+        overflow: hidden;
+        border-left: 4px solid;
+    }
+
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, currentColor, transparent);
+        opacity: 0.3;
+    }
+
+    .kpi-card.success { border-left-color: #28a745; color: #28a745; }
+    .kpi-card.primary { border-left-color: #0d6efd; color: #0d6efd; }
+    .kpi-card.warning { border-left-color: #ffc107; color: #ffc107; }
+    .kpi-card.danger { border-left-color: #dc3545; color: #dc3545; }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+    }
+
+    .kpi-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        opacity: 0.8;
+    }
+
+    .kpi-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .kpi-label {
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .kpi-trend {
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
+    /* بطاقات الإجراءات الرئيسية */
+    .main-action-card {
+        border: none;
+        border-radius: 25px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        transition: all 0.4s ease;
+        background: white;
+        position: relative;
+        overflow: hidden;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .main-action-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, currentColor, transparent);
+    }
+
+    .main-action-card.success { color: #28a745; }
+    .main-action-card.primary { color: #0d6efd; }
+    .main-action-card.warning { color: #ffc107; }
+
+    .main-action-card:hover {
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .action-icon {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        transition: transform 0.4s ease;
+    }
+
+    .main-action-card:hover .action-icon {
+        transform: scale(1.1) rotate(5deg);
+    }
+
+    .action-badge {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+    }
+
+    .action-badge .badge {
+        background: currentColor;
+        color: white;
+        border-radius: 15px;
+        padding: 0.3rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    .action-arrow {
+        position: absolute;
+        bottom: 1.5rem;
+        left: 1.5rem;
+        opacity: 0;
+        transform: translateX(-10px);
+        transition: all 0.4s ease;
+    }
+
+    .main-action-card:hover .action-arrow {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    /* بطاقات الإحصائيات */
+    .stats-card {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        background: white;
+    }
+
+    .chart-wrapper {
+        position: relative;
+        height: 250px;
+        padding: 1rem;
+    }
+
+    /* الروابط السريعة */
+    .quick-links {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .quick-link {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.8rem 1.5rem;
+        background: white;
+        border-radius: 15px;
+        text-decoration: none;
+        color: #6c757d;
+        transition: all 0.3s ease;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .quick-link:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        color: #0d6efd;
+        text-decoration: none;
+    }
+
+    /* تحسينات للوضع الداكن */
+    .dark-mode .kpi-card,
+    .dark-mode .main-action-card,
+    .dark-mode .stats-card,
+    .dark-mode .quick-link {
+        background: #1a1a2e;
+        color: #f8f9fa;
+    }
+
+    .dark-mode .kpi-label,
+    .dark-mode .card-text {
+        color: #adb5bd !important;
+    }
+
+    /* تحسينات للاستجابة */
+    @media (max-width: 768px) {
+        .kpi-value {
+            font-size: 2rem;
+        }
+
+        .action-icon {
+            font-size: 3rem;
+        }
+
+        .quick-links {
+            gap: 1rem;
+        }
+
+        .chart-wrapper {
+            height: 200px;
+        }
+    }
+
+    /* تأثيرات الحركة */
+    .fade-in {
+        animation: fadeIn 0.8s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .kpi-card {
+        animation: slideInLeft 0.6s ease-out;
+    }
+
+    .kpi-card:nth-child(2) { animation-delay: 0.1s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.2s; }
+    .kpi-card:nth-child(4) { animation-delay: 0.3s; }
+
+    @keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-50px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    .main-action-card {
+        animation: slideInUp 0.6s ease-out;
+    }
+
+    .main-action-card:nth-child(2) { animation-delay: 0.1s; }
+    .main-action-card:nth-child(3) { animation-delay: 0.2s; }
+
+    @keyframes slideInUp {
+        from { opacity: 0; transform: translateY(50px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<script>
+    // تأثيرات العدادات
+    document.addEventListener('DOMContentLoaded', function() {
+        // عدادات المؤشرات
+        const counters = document.querySelectorAll('.kpi-value');
+
+        counters.forEach(counter => {
+            const target = parseInt(counter.getAttribute('data-target'));
+            let current = 0;
+            const increment = target / 50;
+
+            const updateCounter = () => {
+                if (current < target) {
+                    current += increment;
+                    counter.textContent = Math.floor(current);
+                    setTimeout(updateCounter, 30);
+                } else {
+                    counter.textContent = target;
+                }
+            };
+
+            updateCounter();
+        });
+
+        // مخطط توزيع الأصول
+        const distributionCtx = document.getElementById('assetsDistributionChart').getContext('2d');
+        new Chart(distributionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['أثاث', 'أجهزة كهربائية', 'أدوات ومعدات', 'مركبات', 'معدات مكتب'],
+                datasets: [{
+                    data: [35, 25, 20, 10, 10],
+                    backgroundColor: [
+                        'rgba(40, 167, 69, 0.8)',
+                        'rgba(0, 123, 255, 0.8)',
+                        'rgba(255, 193, 7, 0.8)',
+                        'rgba(220, 53, 69, 0.8)',
+                        'rgba(111, 66, 193, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: 'white'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+
+        // مخطط اتجاه الأصول
+        const trendCtx = document.getElementById('assetsTrendChart').getContext('2d');
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+                datasets: [{
+                    label: 'الأصول المضافة',
+                    data: [12, 19, 15, 25, 22, 30],
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+
+{% endblock %}

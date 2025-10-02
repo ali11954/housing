@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+{% block title %}تقرير الأصول{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- العنوان وشريط التحكم -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-primary">
+                <i class="fas fa-chart-pie me-2"></i>تقرير الأصول
+            </h1>
+            <p class="text-muted mb-0">نظرة شاملة على جميع الأصول والممتلكات</p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('main.export_assets', file_type='excel') }}" class="btn btn-success">
+                <i class="fas fa-file-excel me-2"></i>تصدير Excel
+            </a>
+            <a href="{{ url_for('main.export_assets', file_type='pdf') }}" class="btn btn-danger">
+                <i class="fas fa-file-pdf me-2"></i>تصدير PDF
+            </a>
+        </div>
+    </div>
+
+    <!-- بطاقات الإحصائيات السريعة -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card bg-primary text-white shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title mb-2">إجمالي الأصول</h6>
+                            <h3 class="mb-0">{{ assets|length }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-boxes fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card bg-success text-white shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title mb-2">أصول نشطة</h6>
+                            <h3 class="mb-0">{{ active_assets_count }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card bg-warning text-white shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title mb-2">أصول تحت الصيانة</h6>
+                            <h3 class="mb-0">{{ maintenance_assets_count }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-tools fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card bg-info text-white shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title mb-2">أنواع الأصول</h6>
+                            <h3 class="mb-0">{{ asset_types_count }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-tags fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إجمالي الأصول حسب الاسم -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-light-blue text-white py-3">
+            <h5 class="mb-0">
+                <i class="fas fa-list-ol me-2"></i>إجمالي الأصول حسب الاسم
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-start ps-4">اسم الأصل</th>
+                            <th class="text-center">إجمالي العدد</th>
+                            <th class="text-center">النسبة المئوية</th>
+                            <th class="text-center">رسم بياني</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set total_assets = assets|length %}
+                        {% for name, total in assets_total_by_name.items() %}
+                        <tr>
+                            <td class="text-start ps-4 fw-bold">{{ name }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-primary rounded-pill">{{ total }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="text-muted">{{ ((total / total_assets) * 100)|round(1) }}%</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="progress" style="height: 8px; width: 100px; margin: 0 auto;">
+                                    <div class="progress-bar bg-primary"
+                                         style="width: {{ (total / total_assets) * 100 }}%"
+                                         title="{{ total }} من {{ total_assets }}"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                                لا توجد بيانات حالياً
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- التوزيع التفصيلي للأصول -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-light-purple text-white py-3">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-bar me-2"></i>التوزيع التفصيلي للأصول
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-start ps-4">بيان الأصل</th>
+                            <th class="text-start">اسم الأصل</th>
+                            <th class="text-center">عدد الأصول</th>
+                            <th class="text-center">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for description, names in assets_summary.items() %}
+                            {% for name, count in names.items() %}
+                            <tr>
+                                <td class="text-start ps-4">
+                                    <span class="fw-bold">{{ description }}</span>
+                                </td>
+                                <td class="text-start">{{ name }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary rounded-pill">{{ count }}</span>
+                                </td>
+                                <td class="text-center">
+                                    {% set status_color = 'success' if count > 5 else 'warning' if count > 2 else 'danger' %}
+                                    <span class="badge bg-{{ status_color }}">
+                                        {% if count > 5 %}ممتاز{% elif count > 2 %}جيد{% else %}منخفض{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            <!-- إجمالي كل بيان أصل -->
+                            <tr class="table-active fw-bold">
+                                <td colspan="2" class="text-start ps-4">
+                                    <i class="fas fa-calculator me-2"></i>إجمالي {{ description }}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary rounded-pill">{{ assets_total_by_description[description] }}</span>
+                                </td>
+                                <td class="text-center">-</td>
+                            </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                <i class="fas fa-chart-bar fa-2x mb-2"></i><br>
+                                لا توجد بيانات حالياً
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول الأصول التفصيلي -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-gradient-dark text-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-table me-2"></i>قائمة الأصول التفصيلية
+            </h5>
+            <div class="d-flex gap-2">
+                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="بحث في الأصول...">
+                <select id="statusFilter" class="form-select form-select-sm">
+                    <option value="">جميع الحالات</option>
+                    <option value="نشط">نشط</option>
+                    <option value="معطل">معطل</option>
+                    <option value="صيانة">تحت الصيانة</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="assetsTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-center">رقم الأصل</th>
+                            <th class="text-start">اسم الأصل</th>
+                            <th class="text-start">بيان الأصل</th>
+                            <th class="text-center">نوع الأصل</th>
+                            <th class="text-center">تاريخ الشراء</th>
+                            <th class="text-center">عمر الأصل</th>
+                            <th class="text-center">الحالة</th>
+                            <th class="text-center">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asset in assets %}
+                        <tr class="asset-row" data-status="{{ asset.status }}">
+                            <td class="text-center fw-bold">{{ asset.asset_number }}</td>
+                            <td class="text-start">{{ asset.asset_name }}</td>
+                            <td class="text-start">{{ asset.asset_description }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-info">{{ asset.asset_type }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% if asset.purchase_date %}
+                                    {{ asset.purchase_date.strftime('%Y-%m-%d') }}
+                                {% else %}
+                                    <span class="text-muted">غير محدد</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if asset.asset_age is not none %}
+                                    <span class="badge bg-{{ 'success' if asset.asset_age < 2 else 'warning' if asset.asset_age < 5 else 'danger' }}">
+                                        {{ asset.asset_age }} سنة
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% set status_badge = {
+                                    'نشط': 'success',
+                                    'معطل': 'danger',
+                                    'صيانة': 'warning',
+                                    'متوقف': 'secondary'
+                                } %}
+                                <span class="badge bg-{{ status_badge.get(asset.status, 'secondary') }}">
+                                    {{ asset.status }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary view-asset"
+                                            data-asset-id="{{ asset.id }}"
+                                            title="عرض التفاصيل">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning edit-asset"
+                                            data-asset-id="{{ asset.id }}"
+                                            title="تعديل">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                                لا توجد أصول حالياً
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-light d-flex justify-content-between align-items-center">
+            <div class="text-muted">
+                عرض <span id="visibleRows">0</span> من {{ assets|length }} عنصر
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0" id="pagination">
+                    <!-- سيتم إنشاء الترقيم عبر JavaScript -->
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- نموذج عرض تفاصيل الأصل -->
+<div class="modal fade" id="assetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">تفاصيل الأصل</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="assetModalBody">
+                <!-- سيتم تحميل المحتوى هنا -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+:root {
+    --light-blue: #4a90e2;
+    --light-purple: #9b59b6;
+    --gradient-dark: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+}
+
+.bg-light-blue { background-color: var(--light-blue) !important; }
+.bg-light-purple { background-color: var(--light-purple) !important; }
+.bg-gradient-dark { background: var(--gradient-dark) !important; }
+
+.card { border-radius: 10px; overflow: hidden; }
+.card-header { border-bottom: 1px solid rgba(0,0,0,0.05); }
+
+.table th { border-top: none; font-weight: 600; }
+.table-hover tbody tr:hover { background-color: rgba(0,0,0,0.02); }
+
+.badge { font-size: 0.75em; }
+.progress { border-radius: 10px; }
+
+.asset-row td { vertical-align: middle; }
+.btn-group-sm > .btn { padding: 0.25rem 0.5rem; }
+
+/* تخصيص شريط التمرير */
+.table-responsive::-webkit-scrollbar { height: 8px; }
+.table-responsive::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+.table-responsive::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+.table-responsive::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+/* تأثيرات للبطاقات */
+.card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important; }
+
+/* تصميم متجاوب */
+@media (max-width: 768px) {
+    .d-flex.justify-content-between { flex-direction: column; gap: 1rem; }
+    .btn-group { flex-direction: column; }
+    .table-responsive { font-size: 0.875rem; }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // البحث والتصفية
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const assetRows = document.querySelectorAll('.asset-row');
+    const visibleRowsSpan = document.getElementById('visibleRows');
+
+    function filterAssets() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const statusValue = statusFilter.value;
+        let visibleCount = 0;
+
+        assetRows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const status = row.getAttribute('data-status');
+            const matchesSearch = text.includes(searchTerm);
+            const matchesStatus = !statusValue || status === statusValue;
+
+            if (matchesSearch && matchesStatus) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        visibleRowsSpan.textContent = visibleCount;
+    }
+
+    searchInput.addEventListener('input', filterAssets);
+    statusFilter.addEventListener('change', filterAssets);
+
+    // تهيئة عدد الصفوف المرئية
+    visibleRowsSpan.textContent = assetRows.length;
+
+    // تفاصيل الأصل (نموذج تجريبي)
+    document.querySelectorAll('.view-asset').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const assetId = this.getAttribute('data-asset-id');
+            // هنا يمكن جلب البيانات عبر AJAX
+            document.getElementById('assetModalBody').innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <p>جاري تحميل التفاصيل...</p>
+                </div>
+            `;
+            $('#assetModal').modal('show');
+
+            // محاكاة جلب البيانات
+            setTimeout(() => {
+                document.getElementById('assetModalBody').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>رقم الأصل:</strong> ASSET-${assetId}</p>
+                            <p><strong>اسم الأصل:</strong> مثال على اسم الأصل</p>
+                            <p><strong>النوع:</strong> مثال على النوع</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>الحالة:</strong> <span class="badge bg-success">نشط</span></p>
+                            <p><strong>تاريخ الشراء:</strong> 2023-01-15</p>
+                            <p><strong>العمر:</strong> <span class="badge bg-warning">2 سنة</span></p>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <h6>التفاصيل الإضافية:</h6>
+                        <p class="text-muted">هذا نموذج تجريبي لعرض تفاصيل الأصل. يمكنك توصيله بخدمة حقيقية.</p>
+                    </div>
+                `;
+            }, 1000);
+        });
+    });
+
+    // الترقيم (تبسيط)
+    const rowsPerPage = 10;
+    const pageCount = Math.ceil(assetRows.length / rowsPerPage);
+
+    if (pageCount > 1) {
+        let paginationHtml = '';
+        for (let i = 1; i <= pageCount; i++) {
+            paginationHtml += `<li class="page-item"><a class="page-link" href="#">${i}</a></li>`;
+        }
+        document.getElementById('pagination').innerHTML = paginationHtml;
+    }
+});
+</script>
+{% endblock %}

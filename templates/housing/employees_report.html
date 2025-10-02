@@ -1,0 +1,720 @@
+{% extends 'base.html' %}
+{% block title %}تقرير الموظفين{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">تقرير الموظفين حسب آخر تخصيص</h2>
+        <div>
+            <button class="btn btn-outline-primary" onclick="exportToExcel()">
+                <i class="fas fa-file-excel"></i> تصدير إلى Excel
+            </button>
+            <button class="btn btn-outline-secondary" onclick="window.print()">
+                <i class="fas fa-print"></i> طباعة
+            </button>
+        </div>
+    </div>
+
+    <!-- فلترة البحث -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">فلترة البحث</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="companyFilter" class="form-label">فلترة حسب الشركة</label>
+                    <select id="companyFilter" class="form-select">
+                        <option value="">جميع الشركات</option>
+                        {% for company in company_summary %}
+                        <option value="{{ company.company_name }}">{{ company.company_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="serviceTypeFilter" class="form-label">فلترة حسب نوع الخدمة</label>
+                    <select id="serviceTypeFilter" class="form-select">
+                        <option value="">جميع أنواع الخدمة</option>
+                        <option value="سكن">سكن</option>
+                        <option value="نقل">نقل</option>
+                        <option value="أخرى">أخرى</option>
+                        <option value="نقل-سكن">نقل-سكن</option>
+                        <option value="نقل-خاص">نقل-خاص</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="searchInput" class="form-label">بحث بالاسم أو الكود</label>
+                    <input type="text" id="searchInput" class="form-control" placeholder="اكتب للبحث...">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-primary me-2" onclick="applyFilters()">تطبيق الفلترة</button>
+                    <button class="btn btn-outline-secondary" onclick="resetFilters()">إعادة تعيين</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول الملخص -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">ملخص الشركات وعدد الموظفين</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped mb-0">
+                    <thead class="table-info">
+                        <tr>
+                            <th>اسم الشركة</th>
+                            <th>عدد الموظفين</th>
+                            <th>النسبة المئوية</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for company in company_summary %}
+                        <tr>
+                            <td>{{ company.company_name }}</td>
+                            <td>{{ company.count }}</td>
+                            <td>{{ "%.1f"|format((company.count / total_count) * 100) }}%</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="table-primary fw-bold">
+                            <td>الإجمالي الكلي</td>
+                            <td>{{ total_count }}</td>
+                            <td>100%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول تفصيلي للموظفين -->
+    <div id="employeesDetail">
+        {% for company, company_emps in employees_by_company.items() %}
+        <div class="card mb-4 company-section" data-company="{{ company }}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">الشركة: {{ company }} ({{ company_emps|length }} موظف/موظفين)</h5>
+                <button class="btn btn-sm btn-outline-secondary toggle-section" data-target="company-{{ loop.index }}">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="card-body p-0 section-content" id="company-{{ loop.index }}">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover mb-0 employee-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>الكود</th>
+                                <th>الاسم</th>
+                                <th>المسمى الوظيفي</th>
+                                <th>القسم</th>
+                                <th>نوع الخدمة</th>
+                                <th>السكن</th>
+                                <th>الغرفة</th>
+                                <th>السرير</th>
+                                <th>نوع التخصيص</th>
+                                <th>تاريخ البداية</th>
+                                <th>تاريخ النهاية</th>
+                                <th>الحالة</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for emp in company_emps %}
+                            <tr class="employee-row" data-code="{{ emp.employee_code }}" data-name="{{ emp.name }}" data-company="{{ company }}" data-service="{{ emp.service_type or '' }}">
+                                <td>{{ emp.employee_code }}</td>
+                                <td>{{ emp.name }}</td>
+                                <td>{{ emp.job_title or '-' }}</td>
+                                <td>{{ emp.department or '-' }}</td>
+                                <td>
+                                    <span class="badge
+                                        {% if emp.service_type == 'سكن' %}bg-primary
+                                        {% elif emp.service_type == 'نقل' %}bg-success
+                                        {% elif emp.service_type == 'نقل-سكن' %}bg-warning
+                                        {% elif emp.service_type == 'نقل-خاص' %}bg-info
+                                        {% elif emp.service_type == 'سكن كامل' %}bg-primary
+                                        {% elif emp.service_type == 'سكن جزئي' %}bg-secondary
+                                        {% elif emp.service_type == 'بدون سكن' %}bg-dark
+                                        {% else %}bg-light text-dark{% endif %}">
+                                        {{ emp.service_type or 'غير محدد' }}
+                                    </span>
+                                </td>
+                                <td>{{ emp.company_housing_name or emp.employee_housing_location or '-' }}</td>
+                                <td>{{ emp.room_number or '-' }}</td>
+                                <td>{{ emp.bed_number or '-' }}</td>
+                                <td>{{ emp.assignment_type or '-' }}</td>
+                                <td>{{ emp.start_date or '-' }}</td>
+                                <td>{{ emp.end_date or '-' }}</td>
+                                <td>
+                                    <span class="badge {% if emp.presence_in_company %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {% if emp.presence_in_company %}مشغول{% else %}فارغ{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" onclick="openEditModal('{{ emp.employee_code }}')" title="تعديل">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="deleteEmployee('{{ emp.employee_code }}')" title="حذف">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- رسالة عدم وجود نتائج -->
+    <div id="noResults" class="alert alert-warning text-center d-none">
+        <i class="fas fa-search me-2"></i> لا توجد نتائج تطابق معايير البحث الخاصة بك.
+    </div>
+</div>
+
+<!-- مودال تعديل الموظف -->
+<div class="modal fade" id="editEmployeeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="editEmployeeForm">
+        <div class="modal-header">
+          <h5 class="modal-title">تعديل بيانات الموظف</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="modal_employee_code" name="employee_code">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">الاسم الكامل</label>
+              <input type="text" id="modal_name" name="name" class="form-control" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">الوظيفة</label>
+              <input type="text" id="modal_job_title" name="job_title" class="form-control">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">القسم</label>
+              <input type="text" id="modal_department" name="department" class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">نوع الدوام</label>
+              <select id="modal_work_type_schedule" name="work_type_schedule" class="form-select">
+                <option value="">اختر نوع الدوام</option>
+                <option value="YCSR-A">YCSR-A - ورديات من السبت الى الثلاثاء</option>
+                <option value="YCSR-B">YCSR-B - اداري من الاحد الى الاربعاء</option>
+                <option value="YCSR-C">YCSR-C - ورديات من الاثنين الى الخميس</option>
+                <option value="YCSR-D">YCSR-D - ورديات الاثنين والثلاثاء اجازة</option>
+                <option value="YCSR-c">YCSR-c - ورديات من الاربعاء الى السبت</option>
+                <option value="YCSRW1">YCSRW1 - اسبوع * اسبوع</option>
+                <option value="YCSRW2">YCSRW2 - اسبوع * اسبوع</option>
+                <option value="YCSRK2">YCSRK2 - اسبوعين * اسبوع</option>
+                <option value="YCSRK1">YCSRK1 - اسبوعين * اسبوع</option>
+                <option value="YCSRSH1">YCSRSH1 - ورديات عادية</option>
+                <option value="N_PR28H1">N_PR28H1 - شهر *شهر</option>
+                <option value="N_PR28H2">N_PR28H2 - شهر *شهر</option>
+                <option value="N_PR28H3">N_PR28H3 - شهر *شهر</option>
+                <option value="N_PR28H4">N_PR28H4 - شهر *شهر</option>
+                <option value="SHIFT2">SHIFT2</option>
+                <option value="YCSRK3">YCSRK3 - 6 أسابيع * 3 أسابيع</option>
+                <option value="NORMYS4">NORMYS4 - اداري من الاحد الى الخميس</option>
+                <option value="NORMALY2">NORMALY2</option>
+                <option value="NORMALY3">NORMALY3</option>
+                <option value="NORMYS5">NORMYS5 - اداري من السبت الى الثلاثاء</option>
+                <option value="NORMYS6">NORMYS6 - اداري من الاثنين الى الخميس</option>
+                <option value="NORMYS7">NORMYS7 - 6 أسابيع * 3 أسابيع</option>
+                <option value="N_YCSRE2">N_YCSRE2</option>
+                <option value="YCSRE1">YCSRE1</option>
+                <option value="NORMYS2">NORMYS2 - ورديات المبيعات</option>
+                <option value="ycsrsc">ycsrsc</option>
+                <option value="ورديات">ورديات</option>
+                <option value="غير محدد">غير محدد</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">الشركة</label>
+              <input type="text" id="modal_company_name" name="company_name" class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">موقع سكن الموظف</label>
+              <input type="text" id="modal_employee_housing_location" name="employee_housing_location" class="form-control">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">نوع الخدمة</label>
+              <select id="modal_service_type" name="service_type" class="form-select">
+                <option value="">اختر نوع الخدمة</option>
+                <option value="سكن">سكن</option>
+                <option value="نقل">نقل</option>
+                <option value="أخرى">أخرى</option>
+                <option value="نقل-سكن">نقل-سكن</option>
+                <option value="نقل-خاص">نقل-خاص</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">موقع السكن في الشركة</label>
+              <input type="text" id="modal_company_housing_location" name="company_housing_location" class="form-control">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">اسم السكن في الشركة</label>
+            <input type="text" id="modal_company_housing_name" name="company_housing_name" class="form-control">
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">رقم الغرفة</label>
+              <input type="text" id="modal_room_number" name="room_number" class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">رقم السرير</label>
+              <input type="text" id="modal_bed_number" name="bed_number" class="form-control">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">الحالة</label>
+            <select id="modal_presence_in_company" name="presence_in_company" class="form-select">
+              <option value="1">مشغول</option>
+              <option value="0">فارغ</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">حفظ التعديلات</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+
+// وظائف الفلترة والبحث
+function applyFilters() {
+    const companyFilter = document.getElementById('companyFilter').value;
+    const serviceTypeFilter = document.getElementById('serviceTypeFilter').value;
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const companySections = document.querySelectorAll('.company-section');
+
+    let visibleSections = 0;
+    let totalVisibleEmployees = 0;
+    const companyCounts = {};
+
+    companySections.forEach(section => {
+        const companyName = section.getAttribute('data-company');
+        const employeeRows = section.querySelectorAll('.employee-row');
+        let visibleRows = 0;
+
+        // تطبيق فلترة الشركة - تطابق تام
+        if (companyFilter && companyName !== companyFilter) {
+            section.style.display = 'none';
+            return;
+        }
+
+        // تطبيق بحث النص ونوع الخدمة
+        employeeRows.forEach(row => {
+            const employeeCode = row.getAttribute('data-code').toLowerCase();
+            const employeeName = row.getAttribute('data-name').toLowerCase();
+            const employeeService = row.getAttribute('data-service');
+
+            // تطابق تام لنوع الخدمة
+            const matchesService = !serviceTypeFilter || employeeService === serviceTypeFilter;
+
+            // تطابق جزئي للبحث (الاسم والكود)
+            const matchesSearch = !searchTerm ||
+                                employeeCode.includes(searchTerm) ||
+                                employeeName.includes(searchTerm);
+
+            // تطابق تام للشركة
+            const matchesCompany = !companyFilter || companyName === companyFilter;
+
+            if (matchesCompany && matchesService && matchesSearch) {
+                row.style.display = '';
+                visibleRows++;
+                totalVisibleEmployees++;
+
+                // تحديث عداد الشركات
+                if (!companyCounts[companyName]) {
+                    companyCounts[companyName] = 0;
+                }
+                companyCounts[companyName]++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // إظهار/إخفاء القسم بناءً على عدد الصفوف المرئية
+        if (visibleRows > 0) {
+            section.style.display = '';
+            visibleSections++;
+
+            // تحديث عنوان القسم بعدد الموظفين المرئيين
+            const header = section.querySelector('.card-header h5');
+            const originalText = header.getAttribute('data-original-text') || header.textContent;
+            header.setAttribute('data-original-text', originalText);
+
+            // استخراج الاسم الأصلي للشركة (بدون العدد)
+            const companyNameOnly = originalText.split(' (')[0];
+            header.textContent = `${companyNameOnly} (${visibleRows} موظف/موظفين)`;
+        } else {
+            section.style.display = 'none';
+        }
+    });
+
+    // تحديث جدول الملخص
+    updateSummaryTable(companyCounts, totalVisibleEmployees);
+
+    // إظهار/إخفاء رسالة عدم وجود نتائج
+    const noResults = document.getElementById('noResults');
+    if (visibleSections === 0) {
+        noResults.classList.remove('d-none');
+    } else {
+        noResults.classList.add('d-none');
+    }
+}
+
+// دالة لتحديث جدول الملخص
+function updateSummaryTable(companyCounts, totalCount) {
+    const summaryTable = document.querySelector('.table-responsive table tbody');
+    const rows = summaryTable.querySelectorAll('tr');
+
+    // تحديث صفوف الشركات
+    rows.forEach((row, index) => {
+        if (index < rows.length - 1) { // تجاهل الصف الأخير (الإجمالي)
+            const companyNameCell = row.cells[0];
+            const companyName = companyNameCell.textContent.trim();
+            const countCell = row.cells[1];
+            const percentageCell = row.cells[2];
+
+            if (companyCounts[companyName]) {
+                countCell.textContent = companyCounts[companyName];
+                const percentage = totalCount > 0 ? ((companyCounts[companyName] / totalCount) * 100).toFixed(1) : '0.0';
+                percentageCell.textContent = percentage + '%';
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    });
+
+    // تحديث صف الإجمالي
+    const totalRow = rows[rows.length - 1];
+    const totalCountCell = totalRow.cells[1];
+    const totalPercentageCell = totalRow.cells[2];
+
+    totalCountCell.textContent = totalCount;
+    totalPercentageCell.textContent = '100%';
+}
+
+function resetFilters() {
+    document.getElementById('companyFilter').value = '';
+    document.getElementById('serviceTypeFilter').value = '';
+    document.getElementById('searchInput').value = '';
+
+    // إعادة تعيين جميع الصفوف والأقسام
+    const companySections = document.querySelectorAll('.company-section');
+    companySections.forEach(section => {
+        section.style.display = '';
+        const employeeRows = section.querySelectorAll('.employee-row');
+        employeeRows.forEach(row => {
+            row.style.display = '';
+        });
+
+        // إعادة تعيين عنوان القسم إلى القيمة الأصلية
+        const header = section.querySelector('.card-header h5');
+        const originalText = header.getAttribute('data-original-text');
+        if (originalText) {
+            header.textContent = originalText;
+        }
+    });
+
+    // إعادة تعيين جدول الملخص إلى القيم الأصلية
+    resetSummaryTable();
+
+    // إخفاء رسالة عدم وجود نتائج
+    document.getElementById('noResults').classList.add('d-none');
+}
+
+// دالة لإعادة تعيين جدول الملخص إلى القيم الأصلية
+function resetSummaryTable() {
+    const summaryTable = document.querySelector('.table-responsive table tbody');
+    const rows = summaryTable.querySelectorAll('tr');
+
+    // إظهار جميع الصفوف
+    rows.forEach(row => {
+        row.style.display = '';
+    });
+
+    // استعادة القيم الأصلية من data attributes إذا كانت موجودة
+    rows.forEach(row => {
+        const countCell = row.cells[1];
+        const percentageCell = row.cells[2];
+
+        if (countCell.hasAttribute('data-original-count')) {
+            countCell.textContent = countCell.getAttribute('data-original-count');
+        }
+        if (percentageCell.hasAttribute('data-original-percentage')) {
+            percentageCell.textContent = percentageCell.getAttribute('data-original-percentage');
+        }
+    });
+}
+
+// حفظ القيم الأصلية عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    // حفظ القيم الأصلية لجدول الملخص
+    const summaryTable = document.querySelector('.table-responsive table tbody');
+    const rows = summaryTable.querySelectorAll('tr');
+
+    rows.forEach(row => {
+        const countCell = row.cells[1];
+        const percentageCell = row.cells[2];
+
+        countCell.setAttribute('data-original-count', countCell.textContent);
+        percentageCell.setAttribute('data-original-percentage', percentageCell.textContent);
+    });
+
+    // حفظ العناوين الأصلية للأقسام
+    const companySections = document.querySelectorAll('.company-section');
+    companySections.forEach(section => {
+        const header = section.querySelector('.card-header h5');
+        header.setAttribute('data-original-text', header.textContent);
+    });
+
+    // إضافة دعم البحث أثناء الكتابة
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('companyFilter').addEventListener('change', applyFilters);
+    document.getElementById('serviceTypeFilter').addEventListener('change', applyFilters);
+});
+// وظائف الطي والتوسيع
+document.querySelectorAll('.toggle-section').forEach(button => {
+    button.addEventListener('click', function() {
+        const targetId = this.getAttribute('data-target');
+        const target = document.getElementById(targetId);
+        const icon = this.querySelector('i');
+
+        if (target.style.display === 'none') {
+            target.style.display = '';
+            icon.classList.remove('fa-chevron-down');
+            icon.classList.add('fa-chevron-up');
+        } else {
+            target.style.display = 'none';
+            icon.classList.remove('fa-chevron-up');
+            icon.classList.add('fa-chevron-down');
+        }
+    });
+});
+
+// وظائف التصدير
+function exportToExcel() {
+    // يمكن تنفيذ التصدير إلى Excel باستخدام مكتبة مثل SheetJS
+    alert('سيتم تنفيذ وظيفة التصدير إلى Excel هنا');
+    // تنفيذ فعلي:
+    // 1. جمع البيانات من الجداول
+    // 2. استخدام مكتبة SheetJS لإنشاء ملف Excel
+    // 3. تحميل الملف
+}
+
+// وظائف إدارة الموظفين
+function openEditModal(employee_code) {
+    fetch(`/get_employee/${employee_code}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        })
+        .then(data => {
+            if (data.success && data.employee) {
+                const emp = data.employee;
+                document.getElementById('modal_employee_code').value = emp.employee_code;
+                document.getElementById('modal_name').value = emp.name;
+                document.getElementById('modal_job_title').value = emp.job_title || '';
+                document.getElementById('modal_department').value = emp.department || '';
+                document.getElementById('modal_work_type_schedule').value = emp.work_type_schedule || emp.work_type || '';
+                document.getElementById('modal_company_name').value = emp.company_name || '';
+                document.getElementById('modal_employee_housing_location').value = emp.employee_housing_location || '';
+                document.getElementById('modal_service_type').value = emp.service_type || '';
+                document.getElementById('modal_company_housing_location').value = emp.company_housing_location || '';
+                document.getElementById('modal_company_housing_name').value = emp.company_housing_name || '';
+                document.getElementById('modal_room_number').value = emp.room_number || '';
+                document.getElementById('modal_bed_number').value = emp.bed_number || '';
+                document.getElementById('modal_presence_in_company').value = emp.presence_in_company || '1';
+
+                new bootstrap.Modal(document.getElementById('editEmployeeModal')).show();
+            } else {
+                throw new Error(data.error || 'لم يتم العثور على بيانات الموظف');
+            }
+        })
+        .catch(err => {
+            console.error('Error fetching employee data:', err);
+            alert('حدث خطأ أثناء تحميل بيانات الموظف: ' + err.message);
+        });
+}
+
+document.getElementById('editEmployeeForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    const submitButton = this.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> جاري الحفظ...';
+
+    var formData = new FormData(this);
+    fetch('/add_edit_employees_all', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+    })
+    .then(data => {
+        if(data.success){
+            showAlert('تم تحديث بيانات الموظف بنجاح', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editEmployeeModal')).hide();
+            // إعادة تحميل الصفحة بعد تأخير بسيط لإظهار رسالة النجاح
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            throw new Error(data.error || "حدث خطأ غير معروف");
+        }
+    })
+    .catch(err => {
+        console.error('Error updating employee:', err);
+        showAlert('حدث خطأ أثناء تحديث بيانات الموظف: ' + err.message, 'danger');
+    })
+    .finally(() => {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
+    });
+});
+
+function deleteEmployee(employee_code) {
+    if(confirm("هل أنت متأكد من حذف الموظف؟ هذا الإجراء لا يمكن التراجع عنه.")){
+        fetch(`/delete_employee/${employee_code}`, {method:'DELETE'})
+        .then(res => {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        })
+        .then(data => {
+            if(data.success){
+                showAlert('تم حذف الموظف بنجاح', 'success');
+                location.reload();
+            } else {
+                throw new Error(data.error || "حدث خطأ أثناء الحذف");
+            }
+        })
+        .catch(err => {
+            console.error('Error deleting employee:', err);
+            showAlert('حدث خطأ أثناء حذف الموظف: ' + err.message, 'danger');
+        });
+    }
+}
+
+// وظيفة مساعدة لعرض التنبيهات
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.style.minWidth = '300px';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alertDiv);
+
+    // إزالة التنبيه تلقائياً بعد 5 ثوان
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.parentNode.removeChild(alertDiv);
+        }
+    }, 5000);
+}
+
+// تهيئة عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    // إضافة دعم البحث أثناء الكتابة
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('companyFilter').addEventListener('change', applyFilters);
+    document.getElementById('serviceTypeFilter').addEventListener('change', applyFilters);
+});
+</script>
+
+<style>
+.table-responsive {
+    overflow-x: auto;
+}
+
+.employee-table th {
+    white-space: nowrap;
+    font-size: 0.85rem;
+}
+
+.employee-table td {
+    font-size: 0.82rem;
+}
+
+.toggle-section {
+    transition: transform 0.3s;
+}
+
+.badge {
+    font-size: 0.75em;
+    white-space: nowrap;
+}
+
+/* تخصيص ألوان لأنواع الخدمة */
+.bg-primary { background-color: #007bff !important; }
+.bg-success { background-color: #28a745 !important; }
+.bg-warning { background-color: #ffc107 !important; color: #000 !important; }
+.bg-info { background-color: #17a2b8 !important; }
+.bg-secondary { background-color: #6c757d !important; }
+.bg-dark { background-color: #343a40 !important; }
+.bg-light { background-color: #f8f9fa !important; color: #000 !important; }
+
+@media print {
+    .btn, .card-header button, .modal {
+        display: none !important;
+    }
+
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .card-header {
+        background-color: white !important;
+        color: black !important;
+        border-bottom: 1px solid #ddd !important;
+    }
+
+    .table-info {
+        background-color: #f8f9fa !important;
+    }
+
+    .badge {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+        background-color: white !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .employee-table th,
+    .employee-table td {
+        font-size: 0.75rem;
+        padding: 0.3rem;
+    }
+
+    .btn-group-sm .btn {
+        padding: 0.2rem 0.4rem;
+    }
+}
+</style>
+{% endblock %}

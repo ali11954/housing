@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}لوحة إدارة التسكين{% endblock %}
+
+{% block content %}
+<h3>📌 مقارنة كشف PDF مع البصمة ليوم {{ selected_date }}</h3>
+
+<h4 class="text-warning">⚠️ موجود في البصمة وغير موجود في PDF</h4>
+<table class="table table-bordered">
+  <thead><tr><th>الكود</th><th>الاسم</th><th>الشركة</th><th>دخول</th><th>خروج</th></tr></thead>
+  <tbody>
+    {% for emp in missing_in_pdf %}
+    <tr>
+      <td>{{ emp.employee_code }}</td>
+      <td>{{ emp.name }}</td>
+      <td>{{ emp.company }}</td>
+      <td>{{ emp.check_in }}</td>
+      <td>{{ emp.check_out }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

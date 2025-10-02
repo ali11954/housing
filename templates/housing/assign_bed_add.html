@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}إضافة تخصيص سرير جديد{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 600px;">
+  <h2 class="mb-4">إضافة تخصيص سرير جديد</h2>
+  <form method="POST" id="bed_assign_form" action="{{ url_for('main.bed_assign_add') }}">
+    <div class="mb-3 position-relative">
+      <label for="employee_search" class="form-label">بحث موظف (كود أو اسم)</label>
+      <input type="text" id="employee_search" name="employee_search" class="form-control" placeholder="ابحث عن موظف" autocomplete="off">
+      <div id="search_results" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+    </div>
+
+    <div class="mb-3">
+      <label for="employee_id" class="form-label">كود الموظف</label>
+      <input type="hidden" id="employee_id" name="employee_id" required>
+      <input type="text" id="employee_display" class="form-control" placeholder="كود واسم الموظف" readonly required>
+    </div>
+
+    <div class="mb-3">
+      <label for="bed_id" class="form-label">اختر السرير</label>
+
+   <select id="bed_id" name="bed_id" class="form-select" required>
+  <option value="" disabled selected>اختر السرير</option>
+  {% for bed in beds %}
+    <option value="{{ bed.id }}" {% if not bed.is_available %}disabled{% endif %}>
+      سرير رقم {{ bed.bed_number }} في الغرفة {{ bed.room.room_number }} - السكن: {{ bed.room.housing_unit.name }}
+      {% if not bed.is_available %}(مشغول في هذا التاريخ){% endif %}
+    </option>
+  {% endfor %}
+</select>
+
+
+      <div class="invalid-feedback">الرجاء اختيار السرير.</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="start_date" class="form-label">تاريخ البداية</label>
+      <input type="date" id="start_date" name="start_date" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+      <label for="end_date" class="form-label">تاريخ النهاية (اختياري)</label>
+      <input type="date" id="end_date" name="end_date" class="form-control">
+    </div>
+
+
+    <div class="mb-3">
+  <label for="assignment_type" class="form-label">نوع التخصيص</label>
+  <select id="assignment_type" name="assignment_type" class="form-select" required>
+    <option value="" disabled selected>اختر نوع التخصيص</option>
+    <option value="permanent">ثابت</option>
+    <option value="rotating">تناوب</option>
+  </select>
+</div>
+
+    <div id="bed_warning" class="alert alert-warning d-none">هذا السرير مشغول حالياً!</div>
+
+    <button type="submit" class="btn btn-primary">حفظ التخصيص</button>
+  </form>
+</div>
+
+<script>
+document.getElementById('employee_search').addEventListener('input', function() {
+  let query = this.value.trim();
+  let resultsDiv = document.getElementById('search_results');
+
+  if (query.length < 2) {
+    resultsDiv.innerHTML = '';
+    return;
+  }
+
+  fetch(`/search_employee?q=${encodeURIComponent(query)}`)
+    .then(res => res.json())
+    .then(data => {
+      resultsDiv.innerHTML = '';
+      if (data.length > 0) {
+        data.forEach(emp => {
+          let item = document.createElement('a');
+          item.href = "#";
+          item.classList.add('list-group-item', 'list-group-item-action');
+          item.textContent = `${emp.code} - ${emp.name}`;
+          item.addEventListener('click', function(e) {
+            e.preventDefault();
+            resultsDiv.innerHTML = '';
+            document.getElementById('employee_id').value = emp.id;
+            document.getElementById('employee_display').value = `${emp.code} - ${emp.name}`;
+          });
+          resultsDiv.appendChild(item);
+        });
+      }
+    });
+});
+
+// تحقق من السرير قبل الحفظ
+document.getElementById('bed_assign_form').addEventListener('submit', function(e){
+  let bedSelect = document.getElementById('bed_id');
+  let selectedOption = bedSelect.options[bedSelect.selectedIndex];
+  if (selectedOption.disabled) {
+    e.preventDefault();
+    let warning = document.getElementById('bed_warning');
+    warning.classList.remove('d-none');
+  }
+});
+</script>
+{% endblock %}

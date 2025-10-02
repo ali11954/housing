@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-primary text-white text-center rounded-top-4">
+            <h4 class="mb-0">متوسط عدد الساكنين لكل وحدة سكن في كل شهر</h4>
+        </div>
+        <div class="card-body bg-light p-4">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover text-center align-middle shadow-sm">
+                    <thead class="table-primary">
+                        <tr>
+                            <th scope="col">اسم السكن</th>
+                            <th scope="col">الشهر</th>
+                            <th scope="col">متوسط عدد الساكنين</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in data %}
+                        <tr>
+                            <td>{{ item.housing_name }}</td>
+                            <td>{{ item.year_month }}</td>
+                            <td>{{ item.average_residents }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

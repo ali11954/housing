@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} الغرفة{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 600px;">
+  <h2 class="mb-4">{{ action }} الغرفة في السكن: <span class="text-primary">{{ housing.name }}</span></h2>
+   <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-success">{{ action }}</button>
+<a href="{{ url_for('main.housing_rooms', housing_id=housing.id) }}" class="btn btn-outline-primary">العودة لقائمة الغرف</a>
+
+    </div>
+  <form method="POST" novalidate>
+    <div class="mb-3">
+      <label for="room_number" class="form-label">رقم الغرفة</label>
+      <input type="text" class="form-control" id="room_number" name="room_number" required
+             value="{{ room.room_number if room else '' }}" placeholder="أدخل رقم الغرفة">
+      <div class="invalid-feedback">
+        الرجاء إدخال رقم الغرفة.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="total_beds" class="form-label">عدد الأسرة</label>
+      <input type="number" min="1" class="form-control" id="total_beds" name="total_beds" required
+             value="{{ room.total_beds if room else '' }}" placeholder="أدخل عدد الأسرة">
+      <div class="invalid-feedback">
+        الرجاء إدخال عدد الأسرة بشكل صحيح (1 أو أكثر).
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-success">{{ action }}</button>
+      <a href="{{ url_for('main.housing_rooms', housing_id=housing.id) }}" class="btn btn-outline-secondary">إلغاء</a>
+    </div>
+  </form>
+</div>
+
+<script>
+(() => {
+  'use strict'
+  const forms = document.querySelectorAll('form')
+
+  Array.from(forms).forEach(form => {
+    form.addEventListener('submit', event => {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+</script>
+
+{% endblock %}

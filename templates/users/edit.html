@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="fas fa-edit me-2"></i>تعديل بيانات المستخدم</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">اسم المستخدم *</label>
+                                    <input type="text" class="form-control" name="username"
+                                           value="{{ user.username }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">البريد الإلكتروني *</label>
+                                    <input type="email" class="form-control" name="email"
+                                           value="{{ user.email }}" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">الاسم الكامل</label>
+                                    <input type="text" class="form-control" name="full_name"
+                                           value="{{ user.full_name or '' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">رقم الهاتف</label>
+                                    <input type="tel" class="form-control" name="phone"
+                                           value="{{ user.phone or '' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">القسم</label>
+                                    <select class="form-select" name="department">
+                                        <option value="">اختر القسم</option>
+                                        <option value="الإدارة" {% if user.department == 'الإدارة' %}selected{% endif %}>الإدارة</option>
+                                        <option value="المبيعات" {% if user.department == 'المبيعات' %}selected{% endif %}>المبيعات</option>
+                                        <option value="الدعم الفني" {% if user.department == 'الدعم الفني' %}selected{% endif %}>الدعم الفني</option>
+                                        <option value="المحاسبة" {% if user.department == 'المحاسبة' %}selected{% endif %}>المحاسبة</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">الدور *</label>
+                                    <select class="form-select" name="role" required>
+                                        <option value="user" {% if user.role == 'user' %}selected{% endif %}>مستخدم عادي</option>
+                                        <option value="moderator" {% if user.role == 'moderator' %}selected{% endif %}>مشرف</option>
+                                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>مسؤول</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- الصلاحيات -->
+                        <!-- قسم الصلاحيات -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h6 class="border-bottom pb-2">إدارة الصلاحيات:</h6>
+        <div class="row">
+            {% for perm_key, perm_name in PERMISSIONS.items() %}
+            <div class="col-md-4 mb-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="permissions"
+                           value="{{ perm_key }}"
+                           {% if perm_key in user_permissions %}checked{% endif %}
+                           {% if user.role == 'admin' %}disabled{% endif %}>
+                    <label class="form-check-label">
+                        {{ perm_name }}
+                    </label>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if user.role == 'admin' %}
+        <div class="alert alert-info mt-2">
+            <i class="fas fa-info-circle me-2"></i>
+            المستخدمون المسؤولون لديهم جميع الصلاحيات تلقائياً
+        </div>
+        {% endif %}
+    </div>
+</div>
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="border-bottom pb-2">الصلاحيات:</h6>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="can_view_reports"
+                                                   value="true" {% if user.can_view_reports %}checked{% endif %}>
+                                            <label class="form-check-label">عرض التقارير</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="can_manage_users"
+                                                   value="true" {% if user.can_manage_users %}checked{% endif %}>
+                                            <label class="form-check-label">إدارة المستخدمين</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="can_manage_rooms"
+                                                   value="true" {% if user.can_manage_rooms %}checked{% endif %}>
+                                            <label class="form-check-label">إدارة الغرف</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="can_manage_finance"
+                                                   value="true" {% if user.can_manage_finance %}checked{% endif %}>
+                                            <label class="form-check-label">إدارة المالية</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">كلمة المرور الجديدة (اختياري)</label>
+                                    <input type="password" class="form-control" name="new_password"
+                                           placeholder="اتركه فارغاً للحفاظ على كلمة المرور الحالية">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">حالة الحساب</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="active"
+                                               value="true" {% if user.active %}checked{% endif %}>
+                                        <label class="form-check-label">مفعل</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('main.users_list') }}" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-arrow-right me-2"></i>رجوع
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-save me-2"></i>حفظ التغييرات
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

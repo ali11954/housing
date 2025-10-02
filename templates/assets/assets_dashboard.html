@@ -1,0 +1,539 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة إدارة الأصول{% endblock %}
+
+{% block content %}
+<div class="container-custom mt-4 fade-in">
+
+    <!-- العنوان الرئيسي مع تحسينات -->
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold text-gradient mb-3">لوحة إدارة الأصول</h1>
+        <p class="lead text-muted">نظام متكامل لإدارة وتتبع جميع أصول الشركة بشكل فعال</p>
+    </div>
+
+    <!-- بطاقات الإدارة -->
+    <div class="row g-4 justify-content-center">
+
+        <!-- إدارة الأصول -->
+        <div class="col-xl-4 col-lg-6 col-md-6">
+            <div class="card management-card h-100">
+                <div class="card-header bg-transparent border-0 text-center pt-4">
+                    <div class="card-icon mb-3">
+                        <i class="fas fa-boxes fa-3x text-primary"></i>
+                    </div>
+                    <h4 class="card-title fw-bold text-primary">إدارة الأصول</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p class="card-text text-muted mb-4">إضافة، تعديل، وحذف الأصول مع تفاصيل كاملة عن كل أصل</p>
+                    <div class="card-stats mb-4">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="stat-item">
+                                    <h5 class="fw-bold text-primary mb-1">150</h5>
+                                    <small class="text-muted">أصل نشط</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-item">
+                                    <h5 class="fw-bold text-success mb-1">85%</h5>
+                                    <small class="text-muted">مستعمل</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-item">
+                                    <h5 class="fw-bold text-warning mb-1">15</h5>
+                                    <small class="text-muted">بحاجة صيانة</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('main.assets_list') }}" class="btn btn-primary btn-lg w-100">
+                        <i class="fas fa-list me-2"></i>عرض الأصول
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ربط الأصول بالسكنات -->
+        <div class="col-xl-4 col-lg-6 col-md-6">
+            <div class="card management-card h-100">
+                <div class="card-header bg-transparent border-0 text-center pt-4">
+                    <div class="card-icon mb-3">
+                        <i class="fas fa-link fa-3x text-success"></i>
+                    </div>
+                    <h4 class="card-title fw-bold text-success">ربط الأصول بالسكنات</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p class="card-text text-muted mb-4">تحديد أي أصل موجود في أي وحدة سكنية مع تحديث فوري</p>
+                    <div class="card-stats mb-4">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="stat-item">
+                                    <h5 class="fw-bold text-success mb-1">120</h5>
+                                    <small class="text-muted">مربوط</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-item">
+                                    <h5 class="fw-bold text-secondary mb-1">30</h5>
+                                    <small class="text-muted">غير مربوط</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('assets.assets_assignment') }}" class="btn btn-success btn-lg w-100">
+                        <i class="fas fa-home me-2"></i>فتح الربط
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- تقارير الأصول -->
+        <div class="col-xl-4 col-lg-6 col-md-6">
+            <div class="card management-card h-100">
+                <div class="card-header bg-transparent border-0 text-center pt-4">
+                    <div class="card-icon mb-3">
+                        <i class="fas fa-chart-bar fa-3x text-warning"></i>
+                    </div>
+                    <h4 class="card-title fw-bold text-warning">تقارير الأصول</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p class="card-text text-muted mb-4">عرض جميع الأصول مع حالة وتواريخ الشراء وتحليلات متقدمة</p>
+                    <div class="card-stats mb-4">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="stat-item">
+                                    <h5 class="fw-bold text-warning mb-1">25</h5>
+                                    <small class="text-muted">تقرير شهري</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-item">
+                                    <h5 class="fw-bold text-info mb-1">98%</h5>
+                                    <small class="text-muted">دقة البيانات</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-item">
+                                    <h5 class="fw-bold text-danger mb-1">5</h5>
+                                    <small class="text-muted">تنبيهات</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('assets.assets_reports_dashboard') }}" class="btn btn-warning btn-lg w-100">
+                        <i class="fas fa-chart-line me-2"></i>فتح التقارير
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- قسم الإحصائيات السريعة -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="text-center mb-4 fw-bold section-title">نظرة سريعة على الأصول</h3>
+        </div>
+
+        <div class="col-md-3 col-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-couch text-primary"></i>
+                </div>
+                <div class="stat-content">
+                    <h4 class="stat-number">45</h4>
+                    <p class="stat-label">أثاث</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-tv text-success"></i>
+                </div>
+                <div class="stat-content">
+                    <h4 class="stat-number">28</h4>
+                    <p class="stat-label">أجهزة كهربائية</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-toolbox text-warning"></i>
+                </div>
+                <div class="stat-content">
+                    <h4 class="stat-number">67</h4>
+                    <p class="stat-label">أدوات ومعدات</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-car text-danger"></i>
+                </div>
+                <div class="stat-content">
+                    <h4 class="stat-number">10</h4>
+                    <p class="stat-label">مركبات</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- مخطط توزيع الأصول -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card chart-card">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="card-title fw-bold d-flex align-items-center">
+                        <i class="fas fa-chart-pie me-2 text-info"></i>
+                        توزيع الأصول حسب النوع
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-wrapper">
+                        <canvas id="assetsDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    /* تحسينات التصميم */
+    .text-gradient {
+        background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .management-card {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        transition: all 0.4s ease;
+        background: white;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .management-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #4361ee, #3a0ca3);
+    }
+
+    .management-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+    }
+
+    .management-card:nth-child(1)::before { background: linear-gradient(90deg, #4361ee, #3a0ca3); }
+    .management-card:nth-child(2)::before { background: linear-gradient(90deg, #198754, #20c997); }
+    .management-card:nth-child(3)::before { background: linear-gradient(90deg, #ffc107, #fd7e14); }
+
+    .card-icon {
+        transition: transform 0.4s ease;
+    }
+
+    .management-card:hover .card-icon {
+        transform: scale(1.1) rotate(5deg);
+    }
+
+    .card-stats {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 15px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+
+    .stat-item {
+        padding: 0.5rem;
+    }
+
+    .btn {
+        border-radius: 15px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s;
+    }
+
+    .btn:hover::before {
+        left: 100%;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .section-title {
+        color: #495057;
+        position: relative;
+        padding-bottom: 15px;
+    }
+
+    .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        right: 50%;
+        transform: translateX(50%);
+        width: 100px;
+        height: 4px;
+        background: linear-gradient(90deg, #4361ee, #3a0ca3);
+        border-radius: 2px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        border-left: 4px solid #4361ee;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-card:nth-child(1) { border-left-color: #4361ee; }
+    .stat-card:nth-child(2) { border-left-color: #198754; }
+    .stat-card:nth-child(3) { border-left-color: #ffc107; }
+    .stat-card:nth-child(4) { border-left-color: #dc3545; }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        opacity: 0.9;
+    }
+
+    .stat-number {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #4361ee, #3a0ca3);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .stat-card:nth-child(1) .stat-number { background: linear-gradient(135deg, #4361ee, #3a0ca3); }
+    .stat-card:nth-child(2) .stat-number { background: linear-gradient(135deg, #198754, #20c997); }
+    .stat-card:nth-child(3) .stat-number { background: linear-gradient(135deg, #ffc107, #fd7e14); }
+    .stat-card:nth-child(4) .stat-number { background: linear-gradient(135deg, #dc3545, #e83e8c); }
+
+    .stat-label {
+        color: #6c757d;
+        margin-bottom: 0;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .chart-card {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        background: white;
+    }
+
+    .chart-wrapper {
+        position: relative;
+        height: 300px;
+        padding: 1rem;
+    }
+
+    /* تحسينات للوضع الداكن */
+    .dark-mode .management-card,
+    .dark-mode .stat-card,
+    .dark-mode .chart-card {
+        background: #1a1a2e;
+        color: #f8f9fa;
+    }
+
+    .dark-mode .card-stats {
+        background: linear-gradient(135deg, #16213e, #0f3460);
+    }
+
+    .dark-mode .text-muted {
+        color: #adb5bd !important;
+    }
+
+    /* تحسينات للاستجابة */
+    @media (max-width: 768px) {
+        .management-card {
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+        }
+
+        .chart-wrapper {
+            height: 250px;
+        }
+    }
+
+    /* تأثيرات دخول */
+    .fade-in {
+        animation: fadeIn 0.8s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .management-card {
+        animation: cardSlide 0.6s ease-out;
+    }
+
+    @keyframes cardSlide {
+        from { opacity: 0; transform: translateX(-50px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    .management-card:nth-child(2) { animation-delay: 0.1s; }
+    .management-card:nth-child(3) { animation-delay: 0.2s; }
+</style>
+
+<script>
+    // مخطط توزيع الأصول
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('assetsDistributionChart').getContext('2d');
+
+        // بيانات مثاليه لتوزيع الأصول
+        const assetsData = {
+            labels: ['أثاث', 'أجهزة كهربائية', 'أدوات ومعدات', 'مركبات', 'معدات مكتب', 'أخرى'],
+            datasets: [{
+                data: [45, 28, 67, 10, 35, 15],
+                backgroundColor: [
+                    'rgba(67, 97, 238, 0.8)',
+                    'rgba(40, 167, 69, 0.8)',
+                    'rgba(255, 193, 7, 0.8)',
+                    'rgba(220, 53, 69, 0.8)',
+                    'rgba(111, 66, 193, 0.8)',
+                    'rgba(32, 201, 151, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(67, 97, 238, 1)',
+                    'rgba(40, 167, 69, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(220, 53, 69, 1)',
+                    'rgba(111, 66, 193, 1)',
+                    'rgba(32, 201, 151, 1)'
+                ],
+                borderWidth: 2,
+                borderRadius: 8
+            }]
+        };
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: assetsData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: {
+                                size: 12,
+                                family: 'Tajawal, sans-serif'
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} أصل (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '60%',
+                animation: {
+                    animateScale: true,
+                    animateRotate: true
+                }
+            }
+        });
+
+        // تأثيرات عدادية للإحصائيات
+        const statNumbers = document.querySelectorAll('.stat-number');
+        const statsSection = document.querySelector('.row.mt-5');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    statNumbers.forEach((stat, index) => {
+                        const target = parseInt(stat.textContent);
+                        let current = 0;
+                        const increment = target / 30;
+                        const delay = index * 100;
+
+                        setTimeout(() => {
+                            const timer = setInterval(() => {
+                                current += increment;
+                                if (current >= target) {
+                                    stat.textContent = target;
+                                    clearInterval(timer);
+                                } else {
+                                    stat.textContent = Math.floor(current);
+                                }
+                            }, 30);
+                        }, delay);
+                    });
+
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.3 });
+
+        observer.observe(statsSection);
+    });
+</script>
+
+{% endblock %}

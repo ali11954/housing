@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ req and 'تعديل طلب صيانة' or 'طلب صيانة جديد' }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ req and 'تعديل طلب صيانة' or 'طلب صيانة جديد' }}</h2>
+    <form method="POST">
+        <div class="mb-3">
+    <label for="title" class="form-label">عنوان الطلب</label>
+    <input type="text" class="form-control" id="title" name="title" required
+           value="{{ req.title if req else '' }}">
+</div>
+
+        <!-- اختيار السكن -->
+        <div class="mb-3">
+            <label for="housing_id" class="form-label">السكن</label>
+            <select class="form-select" name="housing_id" id="housingSelect" required onchange="loadRooms()">
+                <option value="">اختر السكن</option>
+                {% for housing in housings %}
+                <option value="{{ housing.id }}" {% if req and req.housing_id == housing.id %}selected{% endif %}>
+                    {{ housing.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- اختيار الغرفة -->
+        <div class="mb-3">
+            <label for="room_id" class="form-label">الغرفة</label>
+            <select class="form-select" name="room_id" id="roomSelect" required>
+                <option value="">اختر الغرفة</option>
+                {% if req %}
+                    {% for room in req.housing_unit.rooms %}
+                        <option value="{{ room.id }}" {% if req.room_id == room.id %}selected{% endif %}>
+                            {{ room.room_number }}
+                        </option>
+                    {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+<select name="team" class="form-select" required>
+    <option value="">اختر الفريق</option>
+    {% for t in teams %}
+        <option value="{{ t.name }}">{{ t.name }}</option>
+    {% endfor %}
+</select>
+<a href="{{ url_for('main.maintenance_teams') }}" class="btn btn-success btn-sm mt-2">إضافة فريق جديد</a>
+
+
+        <!-- المسؤول -->
+        <div class="mb-3">
+            <label for="responsible" class="form-label">المسؤول</label>
+            <input type="text" class="form-control" id="responsible" name="responsible" required
+                   value="{{ req.responsible if req else '' }}">
+        </div>
+
+        <!-- التاريخ المجدول -->
+        <div class="mb-3">
+            <label for="scheduled_date" class="form-label">التاريخ المجدول</label>
+            <input type="date" class="form-control" id="scheduled_date" name="scheduled_date" required
+                   value="{{ req.scheduled_date if req else '' }}">
+        </div>
+
+        <!-- المدة بالساعات -->
+        <div class="mb-3">
+            <label for="duration_hours" class="form-label">المدة بالساعات</label>
+            <input type="number" step="0.5" class="form-control" id="duration_hours" name="duration_hours" required
+                   value="{{ req.duration_hours if req else '' }}">
+        </div>
+
+        <!-- الأولوية -->
+        <div class="mb-3">
+            <label for="priority" class="form-label">الأولوية</label>
+            <select class="form-select" name="priority" id="priority" required>
+                <option value="">اختر الأولوية</option>
+                <option value="عالية" {% if req and req.priority == 'عالية' %}selected{% endif %}>عالية</option>
+                <option value="متوسطة" {% if req and req.priority == 'متوسطة' %}selected{% endif %}>متوسطة</option>
+                <option value="منخفضة" {% if req and req.priority == 'منخفضة' %}selected{% endif %}>منخفضة</option>
+            </select>
+        </div>
+
+        <!-- نوع الصيانة -->
+        <div class="mb-3">
+            <label for="maintenance_type" class="form-label">نوع الصيانة</label>
+            <select class="form-select" name="maintenance_type" id="maintenance_type" required>
+                <option value="">اختر النوع</option>
+                <option value="تصحيحي" {% if req and req.maintenance_type == 'تصحيحي' %}selected{% endif %}>تصحيحي</option>
+                <option value="وقائي" {% if req and req.maintenance_type == 'وقائي' %}selected{% endif %}>وقائي</option>
+            </select>
+        </div>
+
+        <!-- أمر التصنيع -->
+        <div class="mb-3">
+            <label for="manufacturing_order" class="form-label">أمر التصنيع</label>
+            <input type="text" class="form-control" id="manufacturing_order" name="manufacturing_order"
+                   value="{{ req.manufacturing_order if req else '' }}">
+        </div>
+
+        <!-- الملاحظات -->
+        <div class="mb-3">
+            <label for="notes" class="form-label">الملاحظات / التعليمات</label>
+            <textarea class="form-control" id="notes" name="notes" rows="3">{{ req.notes if req else '' }}</textarea>
+        </div>
+
+        <!-- أزرار -->
+        <button type="submit" class="btn btn-primary">{{ req and 'تحديث الطلب' or 'حفظ الطلب' }}</button>
+        <a href="{{ url_for('main.maintenance_dashboard') }}" class="btn btn-secondary">عودة للوحة الصيانة</a>
+    </form>
+</div>
+
+<script>
+    const roomsByHousing = {
+        {% for housing in housings %}
+            "{{ housing.id }}": [
+                {% for room in housing.rooms %}
+                    {"id": "{{ room.id }}", "room_number": "{{ room.room_number }}"},
+                {% endfor %}
+            ],
+        {% endfor %}
+    };
+
+    function loadRooms() {
+        const housingId = document.getElementById("housingSelect").value;
+        const roomSelect = document.getElementById("roomSelect");
+        roomSelect.innerHTML = '<option value="">اختر الغرفة</option>';
+
+        if (housingId && roomsByHousing[housingId]) {
+            roomsByHousing[housingId].forEach(r => {
+                const opt = document.createElement("option");
+                opt.value = r.id;
+                opt.text = r.room_number;
+                roomSelect.add(opt);
+            });
+        }
+    }
+
+    // تحميل الغرف عند فتح الصفحة في حالة التعديل
+    window.onload = function() {
+        if (document.getElementById("housingSelect").value) {
+            loadRooms();
+            {% if req %}
+                document.getElementById("roomSelect").value = "{{ req.room_id }}";
+            {% endif %}
+        }
+    };
+</script>
+{% endblock %}

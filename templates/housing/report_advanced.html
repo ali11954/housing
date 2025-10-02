@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">تقرير السكن المتقدم</h2>
+
+    <!-- جدول الملخص الحديث -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0"><i class="bi bi-grid-3x3-gap me-2"></i>ملخص السكنات والإشغال</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-center">اسم السكن</th>
+                            <th class="text-center">عدد الغرف</th>
+                            <th class="text-center">إجمالي الأسرة</th>
+                            <th class="text-center">أسرة مشغولة</th>
+                            <th class="text-center">أسرة فارغة</th>
+                            <th class="text-center">نسبة الإشغال</th>
+                            <th class="text-center">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set overall_stats = namespace(total_beds=0, occupied_beds=0, total_rooms=0) %}
+
+                        {% for housing in all_housings %}
+                            {% set housing_stats = namespace(occupied_beds=0, room_count=0) %}
+
+                            <!-- حساب الأسرة المشغولة من بيانات التقرير -->
+                            {% for report_housing in housings %}
+                                {% if report_housing.housing_name == housing.name %}
+                                    {% for room in report_housing.rooms %}
+                                        {% set housing_stats.room_count = housing_stats.room_count + 1 %}
+                                        {% for bed in room.beds %}
+                                            {% if bed.status == 'مشغول' %}
+                                                {% set housing_stats.occupied_beds = housing_stats.occupied_beds + 1 %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+
+                            <!-- إجمالي الأسرة من HousingUnit -->
+                            {% set total_beds = housing.total_beds %}
+                            {% set vacant_beds = total_beds - housing_stats.occupied_beds %}
+                            {% set occupancy_rate = (housing_stats.occupied_beds / total_beds * 100) if total_beds > 0 else 0 %}
+
+                            <!-- تحديث الإجماليات -->
+                            {% set overall_stats.total_beds = overall_stats.total_beds + total_beds %}
+                            {% set overall_stats.occupied_beds = overall_stats.occupied_beds + housing_stats.occupied_beds %}
+                            {% set overall_stats.total_rooms = overall_stats.total_rooms + housing.rooms_count %}
+
+                            <tr>
+                                <td class="text-center fw-bold">{{ housing.name }}</td>
+                                <td class="text-center">{{ housing.rooms_count }}</td>
+                                <td class="text-center">{{ total_beds }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-danger">{{ housing_stats.occupied_beds }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-success">{{ vacant_beds }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="progress" style="height: 20px; width: 100px; margin: 0 auto;">
+                                        <div class="progress-bar {% if occupancy_rate > 80 %}bg-danger{% elif occupancy_rate > 50 %}bg-warning{% else %}bg-success{% endif %}"
+                                             role="progressbar"
+                                             style="width: {{ occupancy_rate }}%;"
+                                             aria-valuenow="{{ occupancy_rate }}"
+                                             aria-valuemin="0"
+                                             aria-valuemax="100">
+                                            {{ "%.1f"|format(occupancy_rate) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    {% if occupancy_rate == 100 %}
+                                        <span class="badge bg-danger">مشغول بالكامل</span>
+                                    {% elif occupancy_rate == 0 %}
+                                        <span class="badge bg-success">فارغ بالكامل</span>
+                                    {% elif occupancy_rate > 80 %}
+                                        <span class="badge bg-warning text-dark">شبه ممتلئ</span>
+                                    {% else %}
+                                        <span class="badge bg-info">متوفر</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+
+                        <!-- صف الإجمالي -->
+                        {% set overall_vacant_beds = overall_stats.total_beds - overall_stats.occupied_beds %}
+                        {% set overall_occupancy_rate = (overall_stats.occupied_beds / overall_stats.total_beds * 100) if overall_stats.total_beds > 0 else 0 %}
+
+                        <tr class="table-secondary fw-bold">
+                            <td class="text-center">الإجمالي</td>
+                            <td class="text-center">{{ overall_stats.total_rooms }}</td>
+                            <td class="text-center">{{ overall_stats.total_beds }}</td>
+                            <td class="text-center">{{ overall_stats.occupied_beds }}</td>
+                            <td class="text-center">{{ overall_vacant_beds }}</td>
+                            <td class="text-center">
+                                <div class="progress" style="height: 20px; width: 100px; margin: 0 auto;">
+                                    <div class="progress-bar bg-primary"
+                                         role="progressbar"
+                                         style="width: {{ overall_occupancy_rate }}%;"
+                                         aria-valuenow="{{ overall_occupancy_rate }}"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100">
+                                        {{ "%.1f"|format(overall_occupancy_rate) }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                {% if overall_occupancy_rate > 90 %}
+                                    <span class="badge bg-danger">إشغال عالي</span>
+                                {% elif overall_occupancy_rate > 70 %}
+                                    <span class="badge bg-warning text-dark">إشغال متوسط</span>
+                                {% else %}
+                                    <span class="badge bg-success">إشغال منخفض</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقة الفلاتر -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">تصفية النتائج</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="housing_id" class="form-label">الوحدة السكنية</label>
+                    <select name="housing_id" id="housing_id" class="form-select">
+                        <option value="">جميع الوحدات</option>
+                        {% for housing in all_housings %}
+                        <option value="{{ housing.id }}"
+                            {% if filters.housing_id == housing.id|string %}selected{% endif %}>
+                            {{ housing.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">الحالة</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">الكل</option>
+                        <option value="مشغول" {% if filters.status == 'مشغول' %}selected{% endif %}>مشغول</option>
+                        <option value="فارغ" {% if filters.status == 'فارغ' %}selected{% endif %}>فارغ</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="room_number" class="form-label">رقم الغرفة</label>
+                    <input type="text" name="room_number" id="room_number" class="form-control"
+                           value="{{ filters.room_number or '' }}" placeholder="أدخل رقم الغرفة">
+                </div>
+                <div class="col-md-2">
+                    <label for="department" class="form-label">القسم</label>
+                    <input type="text" name="department" id="department" class="form-control"
+                           value="{{ filters.department or '' }}" placeholder="أدخل اسم القسم">
+                </div>
+                <div class="col-md-3">
+                    <label for="employee_name" class="form-label">اسم الموظف</label>
+                    <input type="text" name="employee_name" id="employee_name" class="form-control"
+                           value="{{ filters.employee_name or '' }}" placeholder="أدخل اسم الموظف">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">تصفية</button>
+                    <a href="{{ url_for('main.housing_report_advanced') }}" class="btn btn-secondary">إعادة تعيين</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- بطاقة الملخص السريع -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">ملخص التقرير</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h4>{{ overall_stats.total_beds }}</h4>
+                            <p>إجمالي الأسرة</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h4>{{ overall_stats.occupied_beds }}</h4>
+                            <p>أسرة مشغولة</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h4>{{ overall_vacant_beds }}</h4>
+                            <p>أسرة شاغرة</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h4>{{ "%.1f"|format(overall_occupancy_rate) }}%</h4>
+                            <p>نسبة الإشغال</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نتائج التقرير -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">تفاصيل الأسرة</h5>
+            <span class="badge bg-secondary">تم التحديث: {{ now.strftime('%Y-%m-%d %H:%M') }}</span>
+        </div>
+        <div class="card-body">
+            {% if housings %}
+                {% for housing in housings %}
+                <div class="housing-section mb-5">
+                    <h4 class="text-primary mb-3">
+                        {{ housing.housing_name }}
+                        {% if analysis.per_housing[housing.housing_name] %}
+                        <small class="text-muted">
+                            ({{ analysis.per_housing[housing.housing_name].occ }}/{{ analysis.per_housing[housing.housing_name].total }} مشغول)
+                        </small>
+                        {% endif %}
+                    </h4>
+
+                    {% for room in housing.rooms %}
+                    <div class="room-section mb-4">
+                        <h5 class="text-secondary">الغرفة: {{ room.room_number }}</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>رقم السرير</th>
+                                        <th>كود الموظف</th>
+                                        <th>اسم الموظف</th>
+                                        <th>الشركة</th>
+                                        <th>المسمى الوظيفي</th>
+                                        <th>القسم</th>
+                                        <th>الحالة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for bed in room.beds %}
+                                    <tr>
+                                        <td>{{ bed.bed_number }}</td>
+                                        <td>{{ bed.employee_code }}</td>
+                                        <td>
+                                            {% if bed.status == 'مشغول' %}
+                                            <span class="text-success">{{ bed.employee_name }}</span>
+                                            {% else %}
+                                            <span class="text-muted">{{ bed.employee_name }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ bed.company_name }}</td>
+                                        <td>{{ bed.job_title }}</td>
+                                        <td>{{ bed.department }}</td>
+                                        <td>
+                                            {% if bed.status == 'مشغول' %}
+                                            <span class="badge bg-success">مشغول</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">فارغ</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info text-center">
+                    <h5>لا توجد بيانات</h5>
+                    <p>لم يتم العثور على نتائج تطابق معايير التصفية المحددة.</p>
+                </div>
+            {% endif %}
+
+            <!-- الاقتراحات -->
+            {% if analysis.suggestions %}
+            <div class="mt-4">
+                <h6>التوصيات والملاحظات:</h6>
+                <ul class="list-group">
+                    {% for suggestion in analysis.suggestions %}
+                    <li class="list-group-item">{{ suggestion }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.progress {
+    background-color: #e9ecef;
+    border-radius: 0.375rem;
+}
+
+.progress-bar {
+    border-radius: 0.375rem;
+    transition: width 0.6s ease;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.card-header.bg-primary {
+    border-bottom: none;
+}
+
+.table-dark th {
+    border-bottom: 2px solid #dee2e6;
+}
+
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+
+    .progress {
+        width: 80px !important;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+
+{% block title %}أرشيف الحضور{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <h2 class="fw-bold mb-4">أرشيف حضور الموظفين</h2>
+
+  <!-- نموذج البحث -->
+  <form method="GET" class="row g-3 mb-4">
+    <div class="col-md-3">
+      <input type="date" name="date" class="form-control" value="{{ selected_date or '' }}" placeholder="التاريخ">
+    </div>
+    <div class="col-md-3">
+      <input type="text" name="employee_code" class="form-control" value="{{ search_code }}" placeholder="كود الموظف">
+    </div>
+    <div class="col-md-3">
+      <input type="text" name="name" class="form-control" value="{{ search_name }}" placeholder="اسم الموظف">
+    </div>
+    <div class="col-md-3">
+      <button class="btn btn-primary w-100">بحث</button>
+    </div>
+  </form>
+
+  <!-- رسالة التحميل -->
+  <div id="loading" class="text-center mb-3" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">جاري التحميل...</span>
+    </div>
+    <p>جاري البحث...</p>
+  </div>
+
+  <!-- رسالة عندما لا توجد بيانات -->
+  {% if not records %}
+  <div class="alert alert-info text-center">
+    <i class="fas fa-info-circle"></i> لا توجد سجلات حضور للعرض حسب معايير البحث المحددة
+  </div>
+  {% else %}
+
+  <!-- ملخص الحضور العام -->
+  <div class="mb-4 p-3 bg-light border rounded">
+    {% set present_count = records|selectattr("check_in", "ne", "-")|list|length %}
+    {% set total_count = records|length %}
+    <strong>التاريخ:</strong> {{ selected_date.strftime('%Y-%m-%d') if selected_date else "جميع التواريخ" }} |
+    <strong>إجمالي الموظفين:</strong> {{ total_count }} |
+    <strong>المتواجدين (باستلام بصمة دخول):</strong> {{ present_count }} |
+    <strong>غير الحاضرين:</strong> {{ total_count - present_count }}
+  </div>
+
+  <!-- ملخص حسب السكن -->
+  <div class="mb-4 p-3 bg-light border rounded">
+    <h5>ملخص حسب السكن</h5>
+    {% set housing_summary = {} %}
+    {% for r in records %}
+      {% set key = r.company_housing_name or "فارغ" %}
+      {% if key not in housing_summary %}
+        {% set _ = housing_summary.update({key: {'total': 0, 'present': 0}}) %}
+      {% endif %}
+      {% set _ = housing_summary[key].update({
+            'total': housing_summary[key].total + 1,
+            'present': housing_summary[key].present + (1 if r.check_in != '-' else 0)
+          }) %}
+    {% endfor %}
+
+    <table class="table table-bordered text-center align-middle">
+      <thead class="bg-secondary text-white">
+        <tr>
+          <th>اسم السكن</th>
+          <th>إجمالي الموظفين</th>
+          <th>المتواجدين</th>
+          <th>غير الحاضرين</th>
+          <th>نسبة الحضور</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for name, data in housing_summary.items() %}
+        <tr>
+          <td>{{ name }}</td>
+          <td>{{ data.total }}</td>
+          <td class="text-success">{{ data.present }}</td>
+          <td class="text-danger">{{ data.total - data.present }}</td>
+          <td class="fw-bold">{{ "%.1f"|format((data.present / data.total * 100) if data.total > 0 else 0) }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- جدول التفاصيل -->
+  <div id="printableTable" class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+    <table class="table table-hover table-bordered text-center align-middle">
+      <thead class="bg-primary text-white position-sticky top-0">
+        <tr>
+          <th>م</th>
+          <th>كود الموظف</th>
+          <th>الاسم</th>
+          <th>الشركة</th>
+          <th>القسم</th>
+          <th>الوظيفة</th>
+          <th>نوع الدوام</th>
+          <th>السكن</th>
+          <th>الغرفة</th>
+          <th>السرير</th>
+          <th>تسجيل الدخول</th>
+          <th>تسجيل الخروج</th>
+          <th>الحالة</th>
+          <th>التاريخ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+        <tr class="{% if r.check_in == '-' %}table-danger{% else %}table-success{% endif %}">
+          <td>{{ loop.index }}</td>
+          <td>{{ r.employee_code }}</td>
+          <td>{{ r.name }}</td>
+          <td>{{ r.company }}</td>
+          <td>{{ r.department }}</td>
+          <td>{{ r.job_title }}</td>
+          <td>{{ r.work_type }}</td>
+          <td>{{ r.company_housing_name }}</td>
+          <td>{{ r.room_number }}</td>
+          <td>{{ r.bed_number }}</td>
+          <td class="{% if r.check_in != '-' %}fw-bold text-success{% endif %}">
+            {{ r.check_in if r.check_in != '-' else '-' }}
+          </td>
+          <td class="{% if r.check_out != '-' %}fw-bold text-info{% endif %}">
+            {{ r.check_out if r.check_out != '-' else '-' }}
+          </td>
+          <td>
+            {% if r.check_in != '-' %}
+              <span class="badge bg-success">حاضر</span>
+            {% else %}
+              <span class="badge bg-danger">غائب</span>
+            {% endif %}
+          </td>
+          <td>{{ r.date.strftime('%Y-%m-%d') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- أزرار التصدير والطباعة -->
+  <div class="mt-3 d-flex gap-2">
+    <button class="btn btn-success" onclick="window.print()">
+      <i class="fas fa-print"></i> طباعة التقرير
+    </button>
+    <button class="btn btn-info" onclick="exportToExcel()">
+      <i class="fas fa-file-excel"></i> تصدير Excel
+    </button>
+    <button class="btn btn-warning" onclick="exportToPDF()">
+      <i class="fas fa-file-pdf"></i> تصدير PDF
+    </button>
+  </div>
+
+  {% endif %}
+
+</div>
+
+<!-- CSS للطباعة -->
+<style>
+@media print {
+    body * {
+        visibility: hidden;
+        margin: 0;
+        padding: 0;
+    }
+
+    .container, .container * {
+        visibility: visible;
+    }
+
+    .container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 100%;
+        font-size: 12px;
+    }
+
+    .btn, form, nav, .alert, #loading {
+        display: none !important;
+    }
+
+    table {
+        width: 100%;
+        font-size: 10px;
+        page-break-inside: auto;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    .bg-primary, .bg-secondary {
+        background-color: #ccc !important;
+        color: #000 !important;
+    }
+
+    .table-success {
+        background-color: #f8fff8 !important;
+    }
+
+    .table-danger {
+        background-color: #fff8f8 !important;
+    }
+}
+
+/* تحسينات عامة */
+.badge {
+    font-size: 0.8em;
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+.table td {
+    font-size: 0.85em;
+}
+</style>
+
+<script>
+// دالة لتصدير إلى Excel
+function exportToExcel() {
+    const table = document.getElementById('printableTable');
+    const html = table.outerHTML;
+
+    // إنشاء ملف Blob وتنزيله
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+
+    a.href = url;
+    a.download = 'تقرير_الحضور_{{ selected_date or "جميع_التواريخ" }}.xls';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// دالة لتصدير إلى PDF (بسيطة)
+function exportToPDF() {
+    window.print(); // يمكن استبدالها بمكتبة متخصصة لـ PDF
+}
+
+// إظهار رسالة التحميل عند البحث
+document.querySelector('form').addEventListener('submit', function() {
+    document.getElementById('loading').style.display = 'block';
+});
+
+// تنسيق الأوقات تلقائياً
+document.addEventListener('DOMContentLoaded', function() {
+    const timeCells = document.querySelectorAll('td');
+    timeCells.forEach(cell => {
+        const timeText = cell.textContent.trim();
+        if (timeText.match(/^\d{2}:\d{2}:\d{2}$/)) {
+            cell.textContent = formatTime(timeText);
+        }
+    });
+});
+
+function formatTime(timeStr) {
+    if (timeStr === '-' || !timeStr) return '-';
+    try {
+        const time = new Date('1970-01-01T' + timeStr + 'Z');
+        return time.toLocaleTimeString('ar-EG', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+    } catch (e) {
+        return timeStr;
+    }
+}
+</script>
+
+{% endblock %}

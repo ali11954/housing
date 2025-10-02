@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}سجل حضور البصمة{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+
+    <h3 class="mb-3 text-center">سجل حضور البصمة - {{ selected_date.strftime('%Y-%m-%d') }}</h3>
+
+    <!-- اختيار التاريخ -->
+    <form class="row g-2 mb-3" method="get" action="{{ url_for('main.view_fingerprint_attendance') }}">
+        <div class="col-auto">
+            <input type="date" name="date" class="form-control" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">تحديث البيانات</button>
+        </div>
+    </form>
+
+    <!-- تجميع الحضور حسب الشركة -->
+    {% set records_by_company = {} %}
+    {% for rec in records %}
+       {% set company = rec.company or "غير موجود" %}
+
+        {% if company not in records_by_company %}
+            {% set _ = records_by_company.update({company: []}) %}
+        {% endif %}
+        {% set _ = records_by_company[company].append(rec) %}
+    {% endfor %}
+
+    <!-- خلاصة الموظفين حسب الشركة -->
+    {% set total_employees = 0 %}
+    <h4 class="mb-3">ملخص الشركات وعدد الموظفين</h4>
+    <table class="table table-bordered table-striped text-center">
+    <thead class="table-info">
+        <tr>
+            <th>الشركة</th>
+            <th>عدد الموظفين</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for company, recs in records_by_company.items() %}
+            <tr>
+                <td>{{ company }}</td>
+                <td>{{ recs|length }}</td>
+            </tr>
+        {% endfor %}
+        <tr class="table-primary">
+            <td><strong>الإجمالي الكلي</strong></td>
+            <td><strong>{{ records_by_company.values() | map('length') | sum }}</strong></td>
+        </tr>
+    </tbody>
+</table>
+>
+
+    <!-- عرض الحضور لكل شركة -->
+    {% for company, recs in records_by_company.items() %}
+        <h5 class="mt-4">{{ company }} ({{ recs|length }} موظف/موظفين)</h5>
+        <table class="table table-striped table-bordered table-hover text-center align-middle">
+            <thead class="table-primary">
+                <tr>
+                    <th>الكود</th>
+                    <th>الاسم</th>
+                    <th>القسم</th>
+                    <th>الوظيفة</th>
+                    <th>نوع الدوام</th>
+                                       <th>اسم السكن </th>
+                    <th>دخول</th>
+                    <th>خروج</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rec in recs|sort(attribute='employee_code', reverse=true) %}
+                    <tr>
+                        <td>{{ rec.employee_code }}</td>
+                        <td>{{ rec.name }}</td>
+                        <td>{{ rec.department }}</td>
+                        <td>{{ rec.job_title }}</td>
+                        <td>{{ rec.work_type }}</td>
+                                               <td>{{ rec.company_housing_name }}</td>
+                        <td>{{ rec.check_in }}</td>
+                        <td>{{ rec.check_out }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
+
+</div>
+{% endblock %}

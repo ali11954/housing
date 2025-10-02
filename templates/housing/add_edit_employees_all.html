@@ -1,0 +1,543 @@
+{% extends 'base.html' %}
+{% block title %}إدارة الموظفين{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- العنوان الرئيسي -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-primary mb-0">
+            <i class="fas fa-users-cog me-2"></i>إدارة الموظفين
+        </h1>
+        <a href="{{ url_for('main.home') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-right me-1"></i> العودة للرئيسية
+        </a>
+    </div>
+
+    <!-- بطاقة النموذج -->
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-gradient-primary text-white py-3">
+            <h4 class="mb-0">
+                <i class="fas fa-user-edit me-2"></i>
+                {% if employee_data %}تعديل بيانات الموظف{% else %}إضافة موظف جديد{% endif %}
+            </h4>
+        </div>
+        <div class="card-body p-4">
+            <form id="employeeForm" method="POST" action="{{ url_for('main.add_edit_employees_all') }}">
+                <!-- معلومات أساسية -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="border-bottom pb-2 text-primary">
+                            <i class="fas fa-id-card me-2"></i>المعلومات الأساسية
+                        </h5>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">الرقم الوظيفي <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-hashtag"></i></span>
+                            <input type="text" id="employee_code" name="employee_code" class="form-control" required
+                                   placeholder="أدخل الرقم الوظيفي" value="{{ employee_data.employee_code if employee_data }}">
+                        </div>
+                        <div class="form-text">اضغط Enter بعد إدخال الرقم لجلب البيانات</div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">الاسم الكامل <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-user"></i></span>
+                            <input type="text" name="name" class="form-control" required placeholder="الاسم الكامل للموظف"
+                                   value="{{ employee_data.name if employee_data }}">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">الوظيفة</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-briefcase"></i></span>
+                            <input type="text" name="job_title" class="form-control" placeholder="المسمى الوظيفي"
+                                   value="{{ employee_data.job_title if employee_data }}">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">القسم</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-building"></i></span>
+                            <input type="text" name="department" class="form-control" placeholder="القسم أو الإدارة"
+                                   value="{{ employee_data.department if employee_data }}">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">نوع الدوام</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-clock"></i></span>
+                            <select name="work_type_schedule" class="form-select">
+                                <option value="">اختر نوع الدوام</option>
+                                <option value="YCSR-A" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'YCSR-A' }}>YCSR-A - ورديات من السبت الى الثلاثاء (4 أيام دوام، 3 أيام إجازة)</option>
+                                <option value="YCSR-B" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'YCSR-B' }}>YCSR-B - اداري من الاحد الى الاربعاء (4 أيام دوام، 3 أيام إجازة)</option>
+                                <option value="YCSR-C" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'YCSR-C' }}>YCSR-C - ورديات من الاثنين الى الخميس (4 أيام دوام، 3 أيام إجازة)</option>
+                                <option value="YCSR-D" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'YCSR-D' }}>YCSR-D - ورديات الاثنين والثلاثاء اجازة (4 أيام دوام، 3 أيام إجازة)</option>
+                                <option value="YCSR-c" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'YCSR-c' }}>YCSR-c - ورديات من الاربعاء الى السبت (4 أيام دوام، 3 أيام إجازة)</option>
+                                <option value="YCSRW1" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'YCSRW1' }}>YCSRW1 - اسبوع * اسبوع (7 أيام دوام، 7 أيام إجازة)</option>
+                                <option value="YCSRW2" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'YCSRW2' }}>YCSRW2 - اسبوع * اسبوع (7 أيام دوام، 7 أيام إجازة)</option>
+                                <option value="YCSRK2" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'YCSRK2' }}>YCSRK2 - اسبوعين * اسبوع (14 أيام دوام، 7 أيام إجازة)</option>
+                                <option value="YCSRK1" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'YCSRK1' }}>YCSRK1 - اسبوعين * اسبوع (14 أيام دوام، 7 أيام إجازة)</option>
+                                <option value="YCSRSH1" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'YCSRSH1' }}>YCSRSH1 - ورديات عادية (6 أيام دوام، 1 يوم إجازة)</option>
+                                <option value="N_PR28H1" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'N_PR28H1' }}>N_PR28H1 - شهر *شهر (28 أيام دوام، 28 أيام إجازة)</option>
+                                <option value="N_PR28H2" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'N_PR28H2' }}>N_PR28H2 - شهر *شهر (28 أيام دوام، 28 أيام إجازة)</option>
+                                <option value="N_PR28H3" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'N_PR28H3' }}>N_PR28H3 - شهر *شهر (28 أيام دوام، 28 أيام إجازة)</option>
+                                <option value="N_PR28H4" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'N_PR28H4' }}>N_PR28H4 - شهر *شهر (28 أيام دوام، 28 أيام إجازة)</option>
+                                <option value="SHIFT2" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'SHIFT2' }}>SHIFT2 - (42 أيام دوام، 14 أيام إجازة)</option>
+                                <option value="YCSRK3" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'YCSRK3' }}>YCSRK3 - 6 أسابيع * 3 أسابيع (42 أيام دوام، 14 أيام إجازة)</option>
+                                <option value="NORMYS4" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'NORMYS4' }}>NORMYS4 - اداري من الاحد الى الخميس (5 أيام دوام، 2 يوم إجازة)</option>
+                                <option value="NORMALY2" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'NORMALY2' }}>NORMALY2 - (6 أيام دوام، 1 يوم إجازة)</option>
+                                <option value="NORMALY3" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'NORMALY3' }}>NORMALY3 - (7 أيام دوام، 0 أيام إجازة)</option>
+                                <option value="NORMYS5" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'NORMYS5' }}>NORMYS5 - اداري من السبت الى الثلاثاء (4 أيام دوام، 3 أيام إجازة)</option>
+                                <option value="NORMYS6" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'NORMYS6' }}>NORMYS6 - اداري من الاثنين الى الخميس (4 أيام دوام، 3 أيام إجازة)</option>
+                                <option value="NORMYS7" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'NORMYS7' }}>NORMYS7 - 6 أسابيع * 3 أسابيع (42 أيام دوام، 21 يوم إجازة)</option>
+                                <option value="N_YCSRE2" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'N_YCSRE2' }}>N_YCSRE2 - (6 أيام دوام، 1 يوم إجازة)</option>
+                                <option value="YCSRE1" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'YCSRE1' }}>YCSRE1 - (6 أيام دوام، 1 يوم إجازة)</option>
+                                <option value="NORMYS2" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'NORMYS2' }}>NORMYS2 - ورديات المبيعات (6 أيام دوام، 1 يوم إجازة)</option>
+                                <option value="ycsrsc" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'ycsrsc' }}>ycsrsc - (6 أيام دوام، 1 يوم إجازة)</option>
+                                <option value="ورديات" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'ورديات' }}>ورديات - (6 أيام دوام، 1 يوم إجازة)</option>
+                                <option value="غير محدد" {{ 'selected' if employee_data and employee_data.work_type_schedule == 'غير محدد' }}>غير محدد - (6 أيام دوام، 1 يوم إجازة)</option>
+                            </select>
+                        </div>
+                        <div class="form-text">يظهر تفاصيل أيام الدوام والإجازة عند الاختيار</div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">الشركة</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-landmark"></i></span>
+                            <input type="text" name="company_name" class="form-control" placeholder="اسم الشركة"
+                                   value="{{ employee_data.company_name if employee_data }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- معلومات السكن -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="border-bottom pb-2 text-primary">
+                            <i class="fas fa-home me-2"></i>معلومات السكن
+                        </h5>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">موقع سكن الموظف</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-map-marker-alt"></i></span>
+                            <input type="text" name="employee_housing_location" class="form-control" placeholder="موقع السكن"
+                                   value="{{ employee_data.employee_housing_location if employee_data }}">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">نوع الخدمة</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-concierge-bell"></i></span>
+                            <select name="service_type" class="form-select">
+                                <option value="">اختر نوع الخدمة</option>
+                                <option value="سكن" {{ 'selected' if employee_data and employee_data.service_type == 'سكن' }}>سكن</option>
+                                <option value="نقل" {{ 'selected' if employee_data and employee_data.service_type == 'نقل' }}>نقل</option>
+                                <option value="أخرى" {{ 'selected' if employee_data and employee_data.service_type == 'أخرى' }}>أخرى</option>
+                                <option value="نقل-سكن" {{ 'selected' if employee_data and employee_data.service_type == 'نقل-سكن' }}>نقل-سكن</option>
+                                <option value="نقل-خاص" {{ 'selected' if employee_data and employee_data.service_type == 'نقل-خاص' }}>نقل-خاص</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">السكن في الشركة</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-hotel"></i></span>
+                            <input type="text" name="company_housing_location" class="form-control" placeholder="موقع سكن الشركة"
+                                   value="{{ employee_data.company_housing_location if employee_data }}">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">اسم السكن في الشركة</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-signature"></i></span>
+                            <input type="text" name="company_housing_name" class="form-control" placeholder="اسم السكن"
+                                   value="{{ employee_data.company_housing_name if employee_data }}">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">رقم الغرفة</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-door-open"></i></span>
+                            <input type="text" name="room_number" class="form-control" placeholder="رقم الغرفة"
+                                   value="{{ employee_data.room_number if employee_data }}">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">رقم السرير</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-bed"></i></span>
+                            <input type="text" name="bed_number" class="form-control" placeholder="رقم السرير"
+                                   value="{{ employee_data.bed_number if employee_data }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- الحالة والإعدادات -->
+                <div class="row">
+                    <div class="col-12">
+                        <h5 class="border-bottom pb-2 text-primary">
+                            <i class="fas fa-cog me-2"></i>الإعدادات
+                        </h5>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <label class="form-label fw-bold">الحالة</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-user-check"></i></span>
+                            <select name="presence_in_company" class="form-select">
+                                <option value="1" {{ 'selected' if not employee_data or employee_data.presence_in_company == 1 }}>مشغول</option>
+                                <option value="0" {{ 'selected' if employee_data and employee_data.presence_in_company == 0 }}>فارغ</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- أزرار التحكم -->
+                <div class="d-flex gap-3 mt-4 pt-3 border-top">
+                    <button type="submit" class="btn btn-primary px-4 py-2">
+                        <i class="fas fa-save me-2"></i>حفظ البيانات
+                    </button>
+                    <button type="button" id="clearForm" class="btn btn-outline-secondary px-4 py-2">
+                        <i class="fas fa-broom me-2"></i>مسح النموذج
+                    </button>
+                    <button type="button" id="delete_employee" class="btn btn-danger px-4 py-2 ms-auto">
+                        <i class="fas fa-trash-alt me-2"></i>حذف الموظف
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- رسائل التنبيه -->
+    <div id="alertContainer" class="mt-3"></div>
+</div>
+
+<style>
+    :root {
+        --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .bg-gradient-primary {
+        background: var(--gradient-primary) !important;
+    }
+
+    .card {
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        border-bottom: none;
+    }
+
+    .form-label {
+        margin-bottom: 0.5rem;
+    }
+
+    .input-group-text {
+        min-width: 45px;
+        justify-content: center;
+    }
+
+    .form-control, .form-select {
+        border-radius: 0.375rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        border-color: #667eea;
+    }
+
+    .btn {
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: var(--gradient-primary);
+        border: none;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+    }
+
+    .border-bottom {
+        border-color: #667eea !important;
+    }
+
+    /* تأثيرات للعناصر */
+    .input-group {
+        transition: transform 0.2s ease;
+    }
+
+    .input-group:focus-within {
+        transform: translateY(-1px);
+    }
+
+    /* تصميم متجاوب */
+    @media (max-width: 768px) {
+        .d-flex.gap-3 {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    /* تأثير التحميل */
+    .loading {
+        background-color: #f8f9fa !important;
+        opacity: 0.7;
+    }
+</style>
+<style>
+    /* إضافة إلى CSS الموجود */
+    .border-success {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+    }
+
+    .loading {
+        position: relative;
+    }
+
+    .loading::after {
+        content: "جاري التحميل...";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255,255,255,0.9);
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+</style>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+$(document).ready(function(){
+    // عرض رسالة تنبيه
+    function showAlert(message, type = 'info') {
+        const alertClass = {
+            'success': 'alert-success',
+            'error': 'alert-danger',
+            'warning': 'alert-warning',
+            'info': 'alert-info'
+        }[type] || 'alert-info';
+
+        const alertHtml = `
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                <i class="fas fa-${type === 'success' ? 'check-circle' :
+                                 type === 'error' ? 'exclamation-triangle' :
+                                 type === 'warning' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+
+        $('#alertContainer').html(alertHtml);
+
+        // إزالة التنبيه تلقائياً بعد 5 ثواني
+        setTimeout(() => {
+            $('.alert').alert('close');
+        }, 5000);
+    }
+
+    // جلب بيانات الموظف عند الضغط على Enter
+    $('#employee_code').on('keypress', function(e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            let code = $(this).val().trim();
+
+            if(!code) {
+                showAlert('يرجى إدخال الرقم الوظيفي أولاً', 'warning');
+                return;
+            }
+
+            // عرض تحميل
+            $(this).prop('disabled', true).addClass('loading');
+
+            console.log('🔍 جلب بيانات الموظف:', code);
+
+            // استخدام fetch بدلاً من jQuery للتحكم better
+            fetch('{{ url_for("main.get_employee", employee_code="") }}' + encodeURIComponent(code))
+                .then(response => {
+                    console.log('📨 حالة الاستجابة:', response.status);
+                    if (!response.ok) {
+                        throw new Error('خطأ في الشبكة');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('📊 بيانات الاستجابة:', data);
+
+                    if(data && data.success && data.employee){
+                        const employee = data.employee;
+                        console.log('✅ تم تحميل بيانات الموظف:', employee.name);
+
+                        // تعبئة الحقول بالبيانات
+                        fillFormWithEmployeeData(employee);
+                        showAlert('تم تحميل بيانات الموظف بنجاح', 'success');
+                    } else {
+                        console.log('❌ الموظف غير موجود:', data);
+                        // مسح النموذج للبيانات الجديدة مع الاحتفاظ بالرقم الوظيفي
+                        $('#employeeForm')[0].reset();
+                        $('input[name="employee_code"]').val(code);
+                        showAlert('الموظف غير موجود، سيتم إنشاء سجل جديد عند الحفظ', 'info');
+                    }
+                })
+                .catch(error => {
+                    console.error('💥 خطأ في جلب البيانات:', error);
+                    // مسح النموذج للبيانات الجديدة مع الاحتفاظ بالرقم الوظيفي
+                    $('#employeeForm')[0].reset();
+                    $('input[name="employee_code"]').val(code);
+                    showAlert('الموظف غير موجود، سيتم إنشاء سجل جديد عند الحفظ', 'info');
+                })
+                .finally(() => {
+                    $('#employee_code').prop('disabled', false).removeClass('loading');
+                });
+        }
+    });
+
+    // دالة لملء النموذج ببيانات الموظف
+    function fillFormWithEmployeeData(employee) {
+        console.log('🔄 تعبئة النموذج بالبيانات:', employee);
+
+        // تعبئة الحقول النصية
+        $('input[name="name"]').val(employee.name || '');
+        $('input[name="job_title"]').val(employee.job_title || '');
+        $('input[name="department"]').val(employee.department || '');
+        $('input[name="company_name"]').val(employee.company_name || '');
+        $('input[name="employee_housing_location"]').val(employee.employee_housing_location || '');
+        $('input[name="company_housing_location"]').val(employee.company_housing_location || '');
+        $('input[name="company_housing_name"]').val(employee.company_housing_name || '');
+        $('input[name="room_number"]').val(employee.room_number || '');
+        $('input[name="bed_number"]').val(employee.bed_number || '');
+
+        // تعبئة القوائم المنسدلة
+        const workType = employee.work_type_schedule || employee.work_type || '';
+        $('select[name="work_type_schedule"]').val(workType);
+        console.log('⏰ نوع الدوام المحدد:', workType);
+
+        $('select[name="service_type"]').val(employee.service_type || '');
+        console.log('🏠 نوع الخدمة المحدد:', employee.service_type);
+
+        // معالجة presence_in_company
+        let presenceValue = '1';
+        if (employee.presence_in_company !== undefined && employee.presence_in_company !== null) {
+            presenceValue = employee.presence_in_company.toString();
+        }
+        $('select[name="presence_in_company"]').val(presenceValue);
+
+        console.log('✅ تم تعبئة النموذج بنجاح');
+
+        // إظهار تأكيد بصري
+        $('input[name="name"]').addClass('border-success');
+        setTimeout(() => {
+            $('input[name="name"]').removeClass('border-success');
+        }, 2000);
+    }
+
+    // مسح النموذج
+    $('#clearForm').on('click', function(){
+        Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: 'سيتم مسح جميع البيانات المدخلة',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'نعم، مسح',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $('#employeeForm')[0].reset();
+                showAlert('تم مسح النموذج بنجاح', 'success');
+            }
+        });
+    });
+
+    // حذف الموظف
+    $('#delete_employee').on('click', function(){
+        let code = $('#employee_code').val().trim();
+
+        if(!code){
+            showAlert('يرجى إدخال الرقم الوظيفي أولاً', 'warning');
+            return;
+        }
+
+        Swal.fire({
+            title: 'حذف الموظف',
+            text: `هل أنت متأكد من حذف الموظف ذو الرقم ${code}؟ لا يمكن التراجع عن هذا الإجراء.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'نعم، احذف',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '{{ url_for("main.delete_employee", employee_code="") }}' + encodeURIComponent(code),
+                    type: 'DELETE',
+                    success: function(response){
+                        if(response && response.success){
+                            Swal.fire('تم الحذف!', 'تم حذف الموظف بنجاح.', 'success');
+                            $('#employeeForm')[0].reset();
+                        } else {
+                            Swal.fire('خطأ!', (response && response.error) || 'الموظف غير موجود أو حدث خطأ.', 'error');
+                        }
+                    },
+                    error: function(xhr){
+                        Swal.fire('خطأ!', 'حدث خطأ أثناء الحذف.', 'error');
+                    }
+                });
+            }
+        });
+    });
+
+    // التحقق من النموذج قبل الإرسال
+    $('#employeeForm').on('submit', function(e){
+        const code = $('#employee_code').val().trim();
+        const name = $('input[name="name"]').val().trim();
+
+        if(!code || !name) {
+            e.preventDefault();
+            showAlert('يرجى ملء الحقول الإلزامية (الرقم الوظيفي والاسم)', 'warning');
+            return false;
+        }
+
+        // إضافة تحميل للإرسال
+        $('button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...');
+    });
+
+    // إذا كان هناك بيانات موظف مسبقاً (في حالة التعديل)
+    {% if employee_data %}
+    $(document).ready(function(){
+        showAlert('تم تحميل بيانات الموظف للتحرير', 'info');
+    });
+    {% endif %}
+});
+</script>
+{% endblock %}

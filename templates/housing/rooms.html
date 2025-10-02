@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% block title %}الغرف في {{ housing.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <!-- رأس الصفحة مع زر العودة -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1">الغرف في السكن: <span class="text-primary">{{ housing.name }}</span></h2>
+      <p class="text-muted">إدارة الغرف والأسرة في هذا السكن</p>
+    </div>
+    <a href="{{ url_for('main.housing_units') }}" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-right me-1"></i> العودة للسكنات
+    </a>
+  </div>
+
+  <!-- زر العودة إلى قائمة الغرف (يظهر عند عرض الأسرة بعد الإضافة) -->
+  {% if show_back_to_rooms_button %}
+  <div class="alert alert-info d-flex align-items-center justify-content-between">
+    <span>تمت إضافة الأسرة بنجاح</span>
+    <a href="{{ url_for('main.housing_rooms', housing_id=housing.id) }}" class="btn btn-outline-primary">
+      العودة لقائمة الغرف
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- بطاقة إحصائيات سريعة -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card bg-primary text-white">
+        <div class="card-body">
+          <h5 class="card-title">{{ rooms|length }}</h5>
+          <p class="card-text">عدد الغرف</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-success text-white">
+        <div class="card-body">
+          <h5 class="card-title">{{ total_beds }}</h5>
+          <p class="card-text">إجمالي الأسرة</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-warning text-white">
+        <div class="card-body">
+          <h5 class="card-title">{{ occupied_beds }}</h5>
+          <p class="card-text">أسرة مشغولة</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-info text-white">
+        <div class="card-body">
+          <h5 class="card-title">{{ available_beds }}</h5>
+          <p class="card-text">أسرة شاغرة</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- زر إضافة غرفة جديدة -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">قائمة الغرف</h4>
+    <a href="{{ url_for('main.room_add', housing_id=housing.id) }}" class="btn btn-success">
+      <i class="fas fa-plus me-1"></i> إضافة غرفة جديدة
+    </a>
+  </div>
+
+  <!-- جدول الغرف -->
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th width="15%">رقم الغرفة</th>
+              <th width="15%">عدد الأسرة</th>
+              <th width="15%">الأسرة المشغولة</th>
+              <th width="15%">الأسرة الشاغرة</th>
+              <th width="20%">عرض الأسرة</th>
+              <th width="20%">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if rooms %}
+              {% for room in rooms %}
+              <tr>
+                <td>
+                  <span class="fw-bold text-primary">{{ room.room_number }}</span>
+                </td>
+                <td>
+                  <span class="badge bg-secondary rounded-pill">{{ room.total_beds }}</span>
+                </td>
+                <td>
+                  <span class="badge bg-warning rounded-pill">{{ room.occupied_beds }}</span>
+                </td>
+                <td>
+                  <span class="badge bg-success rounded-pill">{{ room.total_beds - room.occupied_beds }}</span>
+                </td>
+                <td>
+                  <a href="{{ url_for('main.room_beds', room_id=room.id) }}" class="btn btn-outline-primary btn-sm" title="عرض الأسرة">
+                    <i class="fas fa-bed me-1"></i> عرض الأسرة
+                  </a>
+                </td>
+                <td>
+                  <div class="btn-group" role="group">
+                    <a href="{{ url_for('main.room_edit', room_id=room.id) }}" class="btn btn-sm btn-outline-primary" title="تعديل">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                    <form action="{{ url_for('main.room_delete', room_id=room.id) }}" method="POST" style="display:inline;">
+                      <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('هل أنت متأكد من حذف هذه الغرفة؟')" title="حذف">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" class="text-center py-4">
+                  <div class="py-3">
+                    <i class="fas fa-door-closed fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">لا توجد غرف في هذا السكن</p>
+                    <a href="{{ url_for('main.room_add', housing_id=housing.id) }}" class="btn btn-primary mt-2">
+                      إضافة أول غرفة
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- زر العودة للسكنات في أسفل الصفحة -->
+  <div class="mt-4 text-center">
+    <a href="{{ url_for('main.housing_units') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-right me-1"></i> العودة للسكنات
+    </a>
+  </div>
+</div>
+
+<style>
+  .table th {
+    border-top: none;
+    font-weight: 600;
+  }
+
+  .card {
+    border: none;
+    border-radius: 10px;
+  }
+
+  .btn {
+    border-radius: 6px;
+  }
+
+  .table-responsive {
+    border-radius: 10px;
+  }
+
+  .badge {
+    font-size: 0.9em;
+  }
+
+  .table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+  }
+</style>
+
+<script>
+  // تفعيل التولتيبس لBootstrap 5
+  document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+  });
+</script>
+{% endblock %}

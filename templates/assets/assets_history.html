@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}تاريخ الأصول{% endblock %}
+
+{% block content %}
+<h2>تاريخ الأصول</h2>
+
+<!-- جدول الربط -->
+<h3>عمليات الربط</h3>
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>رقم الأصل</th>
+            <th>اسم الأصل</th>
+            <th>تاريخ الربط</th>
+            <th>السكن</th>
+            <th>الغرفة</th>
+            <th>السرير</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in history if row.action_type == 'ربط' %}
+        <tr>
+            <td>{{ row.asset_number }}</td>
+            <td>{{ row.asset_name }}</td>
+            <td>{{ row.action_date or "" }}</td>
+            <td>{{ row.new_housing or "" }}</td>
+            <td>{{ row.new_room or "" }}</td>
+            <td>{{ row.new_bed or "" }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="6" class="text-center">لا توجد عمليات ربط</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- جدول النقل -->
+<h3>عمليات النقل</h3>
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>رقم الأصل</th>
+            <th>اسم الأصل</th>
+            <th>تاريخ النقل</th>
+            <th>السكن القديم</th>
+            <th>الغرفة القديمة</th>
+            <th>السرير القديم</th>
+            <th>السكن الجديد</th>
+            <th>الغرفة الجديدة</th>
+            <th>السرير الجديد</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in history if row.action_type == 'تعديل/نقل' %}
+        <tr>
+            <td>{{ row.asset_number }}</td>
+            <td>{{ row.asset_name }}</td>
+                        <td>{{ row.action_date or "" }}</td>
+
+            <td>{{ row.old_housing or "" }}</td>
+            <td>{{ row.old_room or "" }}</td>
+            <td>{{ row.old_bed or "" }}</td>
+            <td>{{ row.new_housing or "" }}</td>
+            <td>{{ row.new_room or "" }}</td>
+            <td>{{ row.new_bed or "" }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="9" class="text-center">لا توجد عمليات نقل</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- جدول الإتلاف -->
+<h3>عمليات الإتلاف</h3>
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>رقم الأصل</th>
+            <th>اسم الأصل</th>
+            <th>تاريخ الإتلاف</th>
+            <th>سبب الإتلاف</th>
+            <th>تاريخ الشراء</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in history if row.action_type == 'اتلاف' %}
+        <tr>
+            <td>{{ row.asset_number }}</td>
+            <td>{{ row.asset_name }}</td>
+            <td>{{ row.action_date or "" }}</td>
+
+            <td>{{ row.description or "" }}</td>
+             <td>{{ row.purchase_date or "" }}</td>
+
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="5" class="text-center">لا توجد عمليات إتلاف</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

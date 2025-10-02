@@ -1,0 +1,644 @@
+{% extends 'base.html' %}
+{% block title %}خريطة الغرف - {{ housing_name }}{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-4 py-4">
+
+    <!-- رأس الصفحة المحسن -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-gradient-primary mb-1">🗺️ خريطة الغرف</h1>
+            <p class="text-muted mb-0">تصور بصري للغرف والأسرة في <strong class="text-primary">{{ housing_name }}</strong></p>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="toggleAssets" class="btn btn-sm btn-light border px-3">
+                <i class="fas fa-cube me-1"></i>إظهار الأصول
+            </button>
+            <button id="downloadSvg" class="btn btn-sm btn-primary px-3">
+                <i class="fas fa-download me-1"></i>تحميل الخريطة
+            </button>
+        </div>
+    </div>
+
+    <!-- شريط السكنات المميز -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body py-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <h6 class="mb-0 fw-bold text-secondary">اختر السكن:</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for housing in all_housings %}
+                    <a href="{{ url_for('main.housing_map', housing_id=housing.id) }}"
+                       class="btn btn-sm rounded-pill px-3 {% if housing.id == current_housing_id %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                       <i class="fas fa-building me-1"></i>{{ housing.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقة الخريطة الرئيسية -->
+    <div class="card border-0 shadow-lg overflow-hidden">
+        <div class="card-header bg-white py-3 border-bottom">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">
+                    <i class="fas fa-map-marked-alt me-2 text-primary"></i>
+                    خريطة السكن: {{ housing_name }}
+                </h5>
+                <div class="text-muted small">
+                    <span class="badge bg-light text-dark">{{ rooms|length }} غرفة</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <!-- منطقة SVG المحسنة -->
+            <div id="svgWrap" class="position-relative" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); min-height: 70vh;">
+                <svg id="housingSvg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet"
+                     style="width:100%; height:100%;">
+                    <!-- سيتم ملؤها عبر JS -->
+                </svg>
+
+                <!-- عناصر تحكم بالزووم -->
+                <div class="position-absolute top-0 end-0 m-3">
+                    <div class="btn-group-vertical shadow-sm">
+                        <button id="zoomIn" class="btn btn-light border-0 rounded-0 rounded-top" style="width: 40px;">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                        <button id="zoomOut" class="btn btn-light border-0 rounded-0 rounded-bottom" style="width: 40px;">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- مؤشر التحميل -->
+                <div id="loadingIndicator" class="position-absolute top-50 start-50 translate-middle">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- وسيلة الإيضاح المحسنة -->
+        <div class="card-footer bg-light py-3">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex flex-wrap gap-3 align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="color-indicator bg-success me-2"></div>
+                            <span class="small">غرف شاغرة</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="color-indicator bg-warning me-2"></div>
+                            <span class="small">إشغال متوسط</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="color-indicator bg-danger me-2"></div>
+                            <span class="small">إشغال كامل</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="color-indicator bg-secondary me-2"></div>
+                            <span class="small">غير متاحة</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <span class="text-muted small">مرر فوق الغرفة للتفاصيل • انقر لفتح التفاصيل الكاملة</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tooltip عائم محسن -->
+<div id="roomTooltip" class="custom-tooltip">
+    <div class="tooltip-header">
+        <h6 class="mb-0" id="tooltipTitle"></h6>
+        <span class="badge ms-2" id="tooltipBadge"></span>
+    </div>
+    <div class="tooltip-content" id="tooltipContent"></div>
+</div>
+
+<!-- Modal عرض تفصيلي محسن -->
+<div class="modal fade" id="roomModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-door-open me-2"></i>
+                    تفاصيل الغرفة <span id="modalRoomNumber" class="fw-bold"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="modalContentHtml"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --warning-gradient: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+        --danger-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);
+        --shadow-hover: 0 10px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .text-gradient-primary {
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .color-indicator {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        display: inline-block;
+    }
+
+    .custom-tooltip {
+        position: absolute;
+        pointer-events: none;
+        display: none;
+        z-index: 2000;
+        background: white;
+        border-radius: 12px;
+        box-shadow: var(--shadow-hover);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        max-width: 300px;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .custom-tooltip.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .tooltip-header {
+        padding: 12px 16px 8px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .tooltip-content {
+        padding: 8px 16px 12px;
+        font-size: 0.9rem;
+    }
+
+    .room-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.05));
+    }
+
+    .room-card:hover {
+        transform: translateY(-5px) scale(1.02);
+        filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.1));
+    }
+
+    .room-label {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        font-weight: 600;
+        pointer-events: none;
+        user-select: none;
+    }
+
+    .employee-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--success-gradient);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.7rem;
+        margin-right: 4px;
+    }
+
+    #svgWrap {
+        border-radius: 0 0 12px 12px;
+    }
+
+    .modal-content {
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .btn-light {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+    }
+</style>
+
+<script>
+// بيانات الغرف الممررة من السيرفر
+const rooms = {{ rooms_json|safe }};
+const svg = document.getElementById('housingSvg');
+const tooltip = document.getElementById('roomTooltip');
+const showAssetsBtn = document.getElementById('toggleAssets');
+const zoomInBtn = document.getElementById('zoomIn');
+const zoomOutBtn = document.getElementById('zoomOut');
+const loadingIndicator = document.getElementById('loadingIndicator');
+
+let showAssets = false;
+let currentScale = 1;
+let panning = false;
+let startPoint = { x: 0, y: 0 };
+let viewBox = { x: 0, y: 0, w: 1200, h: 800 };
+
+// إخفاء مؤشر التحميل بعد تحميل الصفحة
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        loadingIndicator.style.display = 'none';
+    }, 500);
+});
+
+// وظيفة تحديد اللون حسب نسبة الإشغال مع تدرجات جميلة
+function getRoomColor(occupied, total) {
+    if (total === 0) return 'url(#emptyPattern)';
+
+    const percentage = occupied / total;
+
+    if (percentage === 0) return '#10b981'; // أخضر فاتح - فارغة
+    if (percentage < 0.4) return '#f59e0b'; // أصفر - إشغال قليل
+    if (percentage < 0.8) return '#f97316'; // برتقالي - إشغال متوسط
+    return '#ef4444'; // أحمر - إشغال كامل
+}
+
+// وظيفة إنشاء نمط SVG للتظليل
+function createSvgPatterns() {
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+
+    // نمط للغرف غير المتاحة
+    const pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+    pattern.setAttribute('id', 'emptyPattern');
+    pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+    pattern.setAttribute('width', '20');
+    pattern.setAttribute('height', '20');
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('width', '20');
+    rect.setAttribute('height', '20');
+    rect.setAttribute('fill', '#f3f4f6');
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', '0');
+    line.setAttribute('y1', '20');
+    line.setAttribute('x2', '20');
+    line.setAttribute('y2', '0');
+    line.setAttribute('stroke', '#d1d5db');
+    line.setAttribute('stroke-width', '2');
+
+    pattern.appendChild(rect);
+    pattern.appendChild(line);
+    defs.appendChild(pattern);
+
+    svg.appendChild(defs);
+}
+
+// وظيفة تخطيط ورسم الغرف
+function layoutAndRender(rooms) {
+    svg.innerHTML = '';
+    createSvgPatterns();
+
+    const viewPadding = 40;
+    const roomWidth = 180;
+    const roomHeight = 120;
+    const roomSpacing = 30;
+
+    // حساب عدد الأعمدة المناسب
+    const cols = Math.floor(Math.sqrt(rooms.length * 1.5));
+    const rows = Math.ceil(rooms.length / cols);
+
+    // حساب عرض وارتفاع الشبكة
+    const gridWidth = cols * roomWidth + (cols - 1) * roomSpacing;
+    const gridHeight = rows * roomHeight + (rows - 1) * roomSpacing;
+
+    // توسيع viewBox إذا لزم الأمر
+    viewBox.w = Math.max(1200, gridWidth + viewPadding * 2);
+    viewBox.h = Math.max(800, gridHeight + viewPadding * 2);
+    updateViewBox();
+
+    // وضع كل غرفة في الشبكة
+    rooms.forEach((room, index) => {
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+
+        const x = viewPadding + col * (roomWidth + roomSpacing);
+        const y = viewPadding + row * (roomHeight + roomSpacing);
+
+        drawRoom(room, x, y, roomWidth, roomHeight);
+    });
+}
+
+// وظيفة رسم غرفة فردية
+function drawRoom(room, x, y, width, height) {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'room-card');
+    g.setAttribute('data-room-id', room.id);
+
+    // الخلفية مع تدرج لوني
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', x);
+    rect.setAttribute('y', y);
+    rect.setAttribute('width', width);
+    rect.setAttribute('height', height);
+    rect.setAttribute('rx', 12);
+    rect.setAttribute('ry', 12);
+    rect.setAttribute('fill', getRoomColor(room.occupied_beds, room.total_beds));
+    rect.setAttribute('stroke', 'rgba(255, 255, 255, 0.8)');
+    rect.setAttribute('stroke-width', 2);
+
+    // تأثير إضاءة داخلي
+    const innerGlow = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    innerGlow.setAttribute('x', x + 2);
+    innerGlow.setAttribute('y', y + 2);
+    innerGlow.setAttribute('width', width - 4);
+    innerGlow.setAttribute('height', height - 4);
+    innerGlow.setAttribute('rx', 10);
+    innerGlow.setAttribute('ry', 10);
+    innerGlow.setAttribute('fill', 'none');
+    innerGlow.setAttribute('stroke', 'rgba(255, 255, 255, 0.3)');
+    innerGlow.setAttribute('stroke-width', 1);
+
+    // رقم الغرفة
+    const roomNumber = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    roomNumber.setAttribute('x', x + width/2);
+    roomNumber.setAttribute('y', y + 30);
+    roomNumber.setAttribute('text-anchor', 'middle');
+    roomNumber.setAttribute('class', 'room-label');
+    roomNumber.setAttribute('font-size', '24');
+    roomNumber.setAttribute('fill', '#1f2937');
+    roomNumber.textContent = `غرفة ${room.room_number}`;
+
+    // معلومات الأسرة
+    const bedsInfo = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    bedsInfo.setAttribute('x', x + width/2);
+    bedsInfo.setAttribute('y', y + 55);
+    bedsInfo.setAttribute('text-anchor', 'middle');
+    bedsInfo.setAttribute('class', 'room-label');
+    bedsInfo.setAttribute('font-size', '16');
+    bedsInfo.setAttribute('fill', '#6b7280');
+    bedsInfo.textContent = `${room.occupied_beds}/${room.total_beds} سرير`;
+
+    // معلومات إضافية (الموظفين)
+    const employeesCount = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    employeesCount.setAttribute('x', x + width/2);
+    employeesCount.setAttribute('y', y + 80);
+    employeesCount.setAttribute('text-anchor', 'middle');
+    employeesCount.setAttribute('class', 'room-label');
+    employeesCount.setAttribute('font-size', '14');
+    employeesCount.setAttribute('fill', '#9ca3af');
+    employeesCount.textContent = `${room.employees.length} موظف`;
+
+    g.appendChild(rect);
+    g.appendChild(innerGlow);
+    g.appendChild(roomNumber);
+    g.appendChild(bedsInfo);
+    g.appendChild(employeesCount);
+
+    // إضافة أيقونة الأصول إذا كانت موجودة
+    if (room.assets && room.assets.length > 0) {
+        const assetsIcon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        assetsIcon.setAttribute('x', x + width - 20);
+        assetsIcon.setAttribute('y', y + 25);
+        assetsIcon.setAttribute('class', 'room-label');
+        assetsIcon.setAttribute('font-size', '14');
+        assetsIcon.setAttribute('fill', showAssets ? '#6366f1' : 'transparent');
+        assetsIcon.textContent = '📦';
+        g.appendChild(assetsIcon);
+    }
+
+    svg.appendChild(g);
+
+    // إضافة الأحداث التفاعلية
+    addRoomInteractions(g, room);
+}
+
+// وظيفة إضافة التفاعلات للغرفة
+function addRoomInteractions(roomElement, roomData) {
+    // تأثير hover
+    roomElement.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-5px) scale(1.02)';
+    });
+
+    roomElement.addEventListener('mouseleave', function() {
+        this.style.transform = '';
+    });
+
+    // tooltip تفصيلي
+    roomElement.addEventListener('mousemove', function(ev) {
+        const rect = svg.getBoundingClientRect();
+        const x = ev.clientX - rect.left;
+        const y = ev.clientY - rect.top;
+
+        tooltip.style.left = (ev.clientX + 15) + 'px';
+        tooltip.style.top = (ev.clientY + 15) + 'px';
+        tooltip.classList.add('show');
+
+        // تحديث محتوى الـ tooltip
+        document.getElementById('tooltipTitle').textContent = `غرفة ${roomData.room_number}`;
+        document.getElementById('tooltipBadge').textContent = `${roomData.occupied_beds}/${roomData.total_beds}`;
+        document.getElementById('tooltipBadge').className = `badge ${getBadgeClass(roomData.occupied_beds, roomData.total_beds)}`;
+
+        let content = `السعة: ${roomData.occupied_beds}/${roomData.total_beds} أسرة<br>`;
+        content += `الموظفون: ${roomData.employees.length} شخص<br>`;
+
+        if (roomData.employees.length > 0) {
+            content += `<div class="mt-2">`;
+            roomData.employees.slice(0, 3).forEach(emp => {
+                content += `<span class="employee-avatar">${emp.name.charAt(0)}</span> ${emp.name}<br>`;
+            });
+            if (roomData.employees.length > 3) {
+                content += `+ ${roomData.employees.length - 3} أكثر`;
+            }
+            content += `</div>`;
+        }
+
+        document.getElementById('tooltipContent').innerHTML = content;
+    });
+
+    roomElement.addEventListener('mouseleave', function() {
+        tooltip.classList.remove('show');
+    });
+
+    // حدث النقر لفتح Modal
+    roomElement.addEventListener('click', function() {
+        showRoomModal(roomData);
+    });
+}
+
+// وظيفة عرض Modal التفاصيل
+function showRoomModal(room) {
+    document.getElementById('modalRoomNumber').textContent = room.room_number;
+
+    let html = `
+        <div class="p-4">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card bg-light border-0 h-100">
+                        <div class="card-body text-center">
+                            <h3 class="text-primary">${room.occupied_beds}/${room.total_beds}</h3>
+                            <p class="mb-0 text-muted">أسرة مشغولة</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-light border-0 h-100">
+                        <div class="card-body text-center">
+                            <h3 class="text-primary">${room.employees.length}</h3>
+                            <p class="mb-0 text-muted">موظف</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    `;
+
+    if (room.employees.length > 0) {
+        html += `
+            <h6 class="fw-bold mb-3">الموظفون في هذه الغرفة</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>الوظيفة</th>
+                            <th>الكود</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        room.employees.forEach(emp => {
+            html += `
+                <tr>
+                    <td>${emp.name}</td>
+                    <td>${emp.job_title || 'غير محدد'}</td>
+                    <td>${emp.employee_code || '--'}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        html += `<div class="alert alert-info text-center">لا يوجد موظفون في هذه الغرفة</div>`;
+    }
+
+    if (room.assets && room.assets.length > 0) {
+        html += `
+            <h6 class="fw-bold mb-3 mt-4">الأصول في الغرفة</h6>
+            <div class="d-flex flex-wrap gap-2">
+        `;
+
+        room.assets.forEach(asset => {
+            html += `<span class="badge bg-light text-dark border">${asset.name}</span>`;
+        });
+
+        html += `</div>`;
+    }
+
+    html += `</div>`;
+
+    document.getElementById('modalContentHtml').innerHTML = html;
+    new bootstrap.Modal(document.getElementById('roomModal')).show();
+}
+
+// وظيفة تحديد لون البادج
+function getBadgeClass(occupied, total) {
+    if (total === 0) return 'bg-secondary';
+    const percentage = occupied / total;
+    if (percentage === 0) return 'bg-success';
+    if (percentage < 0.5) return 'bg-warning';
+    return 'bg-danger';
+}
+
+// وظائف التحكم بالزووم
+function updateViewBox() {
+    svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+}
+
+zoomInBtn.addEventListener('click', () => {
+    currentScale *= 1.2;
+    viewBox.w = 1200 / currentScale;
+    viewBox.h = 800 / currentScale;
+    updateViewBox();
+});
+
+zoomOutBtn.addEventListener('click', () => {
+    currentScale /= 1.2;
+    viewBox.w = 1200 / currentScale;
+    viewBox.h = 800 / currentScale;
+    updateViewBox();
+});
+
+// إضافة إمكانية السحب للخريطة
+svg.addEventListener('mousedown', (ev) => {
+    panning = true;
+    startPoint = { x: ev.clientX, y: ev.clientY };
+});
+
+svg.addEventListener('mousemove', (ev) => {
+    if (!panning) return;
+
+    const dx = ev.clientX - startPoint.x;
+    const dy = ev.clientY - startPoint.y;
+
+    viewBox.x -= dx * (viewBox.w / svg.clientWidth);
+    viewBox.y -= dy * (viewBox.h / svg.clientHeight);
+
+    startPoint = { x: ev.clientX, y: ev.clientY };
+    updateViewBox();
+});
+
+svg.addEventListener('mouseup', () => { panning = false; });
+svg.addEventListener('mouseleave', () => { panning = false; });
+
+// زر تبديل إظهار الأصول
+showAssetsBtn.addEventListener('click', () => {
+    showAssets = !showAssets;
+    showAssetsBtn.innerHTML = showAssets ?
+        '<i class="fas fa-eye-slash me-1"></i>إخفاء الأصول' :
+        '<i class="fas fa-cube me-1"></i>إظهار الأصول';
+
+    showAssetsBtn.classList.toggle('btn-primary', showAssets);
+    showAssetsBtn.classList.toggle('btn-light', !showAssets);
+
+    // إعادة الرسم مع تحديث حالة الأصول
+    layoutAndRender(rooms);
+});
+
+// زر تحميل SVG
+document.getElementById('downloadSvg').addEventListener('click', function(){
+    const serializer = new XMLSerializer();
+    const source = serializer.serializeToString(svg);
+    const blob = new Blob([source], {type: 'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `خريطة_${housing_name.replace(/\s+/g, '_')}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+});
+
+// البدء في التصيير
+layoutAndRender(rooms);
+</script>
+{% endblock %}

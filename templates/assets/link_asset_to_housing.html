@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+{% block title %} ربط الأصول بالسكن {% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- رأس الصفحة -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1 text-primary">ربط الأصول بالسكن والغرفة والسرير</h2>
+            <p class="text-muted">إدارة وتوزيع الأصول على الوحدات السكنية والغرف</p>
+        </div>
+        <div class="badge bg-info fs-6">
+            <i class="fas fa-link me-1"></i> {{ asset_links|length }} أصل مرتبط
+        </div>
+    </div>
+
+    <!-- نموذج الربط -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>ربط أصل جديد</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" class="row g-3" id="linkAssetForm">
+                <div class="col-md-3">
+                    <label for="asset_id" class="form-label fw-bold">اختر الأصل:</label>
+                    <select class="form-select" name="asset_id" id="asset_id" required>
+                        <option value="">-- اختر الأصل --</option>
+                        {% for asset in assets %}
+                        <option value="{{ asset.id }}"
+                                {% if selected_asset and selected_asset.id == asset.id %}selected{% endif %}
+                                data-type="{{ asset.asset_type }}"
+                                data-status="{{ asset.status }}">
+                            {{ asset.asset_number }} - {{ asset.asset_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="mt-2" id="assetInfo">
+                        <!-- سيتم عرض معلومات الأصل هنا -->
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="housing_id" class="form-label fw-bold">اختر السكن:</label>
+                    <select class="form-select" name="housing_id" id="housing_id" required onchange="updateRooms()">
+                        <option value="">-- اختر السكن --</option>
+                        {% for housing in housings %}
+                        <option value="{{ housing.id }}">{{ housing.name }} - {{ housing.number }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="mt-2" id="housingInfo">
+                        <!-- سيتم عرض معلومات السكن هنا -->
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="room_id" class="form-label fw-bold">اختر الغرفة:</label>
+                    <select class="form-select" name="room_id" id="room_id" onchange="updateBeds()">
+                        <option value="">-- بدون غرفة --</option>
+                    </select>
+                    <div class="mt-2" id="roomInfo">
+                        <!-- سيتم عرض معلومات الغرفة هنا -->
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="bed_id" class="form-label fw-bold">اختر السرير:</label>
+                    <select class="form-select" name="bed_id" id="bed_id">
+                        <option value="">-- بدون سرير --</option>
+                    </select>
+                    <div class="mt-2" id="bedInfo">
+                        <!-- سيتم عرض معلومات السرير هنا -->
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="reset" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-redo me-1"></i> إعادة تعيين
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-link me-1"></i> ربط الأصل
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="mb-0">{{ assets|length }}</h5>
+                            <small>إجمالي الأصول</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-cube fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="mb-0">{{ asset_links|length }}</h5>
+                            <small>أصول مرتبطة</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-link fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="mb-0">{{ housings|length }}</h5>
+                            <small>وحدات سكنية</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-home fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h5 class="mb-0">{{ (assets|length) - (asset_links|length) }}</h5>
+                            <small>أصول غير مرتبطة</small>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-unlink fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول الأصول المرتبطة -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>الأصول المرتبطة حاليًا</h5>
+            <span class="badge bg-dark fs-6">{{ asset_links|length }} عنصر</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th width="120">رقم الأصل</th>
+                            <th>اسم الأصل</th>
+                            <th width="120">النوع</th>
+                            <th width="100">الحالة</th>
+                            <th width="120">السكن</th>
+                            <th width="100">الغرفة</th>
+                            <th width="100">السرير</th>
+                            <th width="120">تاريخ الربط</th>
+                            <th width="150" class="text-center">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for link in asset_links %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-secondary">{{ link.asset.asset_number }}</span>
+                            </td>
+                            <td>{{ link.asset.asset_name }}</td>
+                            <td>
+                                <span class="badge
+                                    {% if link.asset.asset_type == 'أثاث' %}bg-info
+                                    {% elif link.asset.asset_type == 'أجهزة كهربائية' %}bg-warning
+                                    {% elif link.asset.asset_type == 'إلكترونيات' %}bg-success
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ link.asset.asset_type }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge
+                                    {% if link.asset.status == 'جيد' %}bg-success
+                                    {% elif link.asset.status == 'يحتاج صيانة' %}bg-warning
+                                    {% elif link.asset.status == 'معطل' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ link.asset.status }}
+                                </span>
+                            </td>
+                            <td>{{ link.housing_unit.name }}</td>
+                            <td>
+                                {% if link.room %}
+                                <span class="badge bg-light text-dark">{{ link.room.room_number }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if link.bed %}
+                                <span class="badge bg-primary">{{ link.bed.bed_number }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ link.link_date.strftime('%Y-%m-%d') }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('main.edit_asset_link', link_id=link.id) }}"
+                                       class="btn btn-outline-primary" title="تعديل الربط">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ url_for('main.edit_asset_link', link_id=link.id) }}?action=transfer"
+                                       class="btn btn-outline-info" title="نقل الأصل">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </a>
+                                    <a href="{{ url_for('main.dispose_asset', asset_id=link.asset.id, action_type='اتلاف') }}"
+                                       class="btn btn-outline-danger"
+                                       title="إتلاف الأصل"
+                                       onclick="return confirm('هل أنت متأكد من إتلاف هذا الأصل؟')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                                    <p class="mb-0">لا توجد أصول مرتبطة بعد</p>
+                                    <small>استخدم نموذج الربط أعلاه لإضافة ارتباطات جديدة</small>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نموذج التأكيد -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد الإجراء</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmMessage">
+                <!-- سيتم ملؤه بالجافاسكريبت -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-danger" id="confirmAction">متابعة</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// تحديث الغرف بناءً على السكن المحدد
+function updateRooms() {
+    const housingId = document.getElementById('housing_id').value;
+    const roomSelect = document.getElementById('room_id');
+    const bedSelect = document.getElementById('bed_id');
+
+    if (!housingId) {
+        roomSelect.innerHTML = '<option value="">-- بدون غرفة --</option>';
+        bedSelect.innerHTML = '<option value="">-- بدون سرير --</option>';
+        return;
+    }
+
+    roomSelect.innerHTML = '<option value="">جارٍ التحميل...</option>';
+    bedSelect.innerHTML = '<option value="">-- بدون سرير --</option>';
+
+    fetch(`/api/rooms/${housingId}`)
+        .then(response => response.json())
+        .then(data => {
+            roomSelect.innerHTML = '<option value="">-- بدون غرفة --</option>';
+            data.forEach(room => {
+                const option = document.createElement('option');
+                option.value = room.id;
+                option.text = room.room_number;
+                option.setAttribute('data-capacity', room.capacity || 'غير محدد');
+                roomSelect.appendChild(option);
+            });
+
+            // تحديث معلومات السكن
+            const housingSelect = document.getElementById('housing_id');
+            const selectedHousing = housingSelect.options[housingSelect.selectedIndex];
+            document.getElementById('housingInfo').innerHTML = `
+                <small class="text-muted">${selectedHousing.text}</small>
+            `;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            roomSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
+        });
+}
+
+// تحديث الأسرّة بناءً على الغرفة المحددة
+function updateBeds() {
+    const roomId = document.getElementById('room_id').value;
+    const bedSelect = document.getElementById('bed_id');
+
+    if (!roomId) {
+        bedSelect.innerHTML = '<option value="">-- بدون سرير --</option>';
+        return;
+    }
+
+    bedSelect.innerHTML = '<option value="">جارٍ التحميل...</option>';
+
+    fetch(`/api/beds/${roomId}`)
+        .then(response => response.json())
+        .then(data => {
+            bedSelect.innerHTML = '<option value="">-- بدون سرير --</option>';
+            data.forEach(bed => {
+                const option = document.createElement('option');
+                option.value = bed.id;
+                option.text = `${bed.bed_number} (${bed.status || 'متاح'})`;
+                bedSelect.appendChild(option);
+            });
+
+            // تحديث معلومات الغرفة
+            const roomSelect = document.getElementById('room_id');
+            const selectedRoom = roomSelect.options[roomSelect.selectedIndex];
+            if (selectedRoom.value) {
+                document.getElementById('roomInfo').innerHTML = `
+                    <small class="text-muted">السعة: ${selectedRoom.getAttribute('data-capacity')}</small>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            bedSelect.innerHTML = '<option value="">خطأ في التحميل</option>';
+        });
+}
+
+// عرض معلومات الأصل المحدد
+document.getElementById('asset_id').addEventListener('change', function() {
+    const assetInfo = document.getElementById('assetInfo');
+    const selectedOption = this.options[this.selectedIndex];
+
+    if (selectedOption.value) {
+        const assetType = selectedOption.getAttribute('data-type');
+        const assetStatus = selectedOption.getAttribute('data-status');
+
+        assetInfo.innerHTML = `
+            <div class="small">
+                <span class="badge bg-light text-dark me-1">${assetType || 'غير محدد'}</span>
+                <span class="badge
+                    ${assetStatus === 'جيد' ? 'bg-success' :
+                      assetStatus === 'يحتاج صيانة' ? 'bg-warning' :
+                      assetStatus === 'معطل' ? 'bg-danger' : 'bg-secondary'}">
+                    ${assetStatus || 'غير محدد'}
+                </span>
+            </div>
+        `;
+    } else {
+        assetInfo.innerHTML = '';
+    }
+});
+
+// تأكيد قبل الإتلاف
+function confirmDisposal(url) {
+    document.getElementById('confirmMessage').innerHTML = `
+        <p>هل أنت متأكد من أنك تريد إتلاف هذا الأصل؟</p>
+        <small class="text-danger">هذا الإجراء لا يمكن التراجع عنه</small>
+    `;
+
+    document.getElementById('confirmAction').onclick = function() {
+        window.location.href = url;
+    };
+
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+}
+
+// تهيئة الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    // تحديث معلومات العناصر إذا كانت محددة مسبقاً
+    const assetSelect = document.getElementById('asset_id');
+    if (assetSelect.value) {
+        assetSelect.dispatchEvent(new Event('change'));
+    }
+
+    const housingSelect = document.getElementById('housing_id');
+    if (housingSelect.value) {
+        updateRooms();
+    }
+});
+</script>
+
+<style>
+.card {
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.table th {
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+@media (max-width: 768px) {
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .btn-group {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .btn-group .btn {
+        margin: 2px;
+    }
+
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+}
+</style>
+{% endblock %}

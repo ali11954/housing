@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>تعديل تخصيص سرير</h2>
+
+<form method="POST">
+
+    <div class="mb-3">
+        <label for="bed" class="form-label">اختر السرير</label>
+        <select id="bed" name="bed_id" class="form-select" required>
+            {% for bed in beds %}
+            <option value="{{ bed.id }}" {% if bed.id == assignment.bed_id %}selected{% endif %}>
+                سرير رقم {{ bed.bed_number }} في الغرفة رقم {{ bed.room.room_number }} - {{ bed.room.housing_unit.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="employee" class="form-label">اختر الموظف</label>
+        <select id="employee" name="employee_id" class="form-select" required>
+            {% for emp in employees %}
+            <option value="{{ emp.id }}" {% if emp.id == assignment.employee_id %}selected{% endif %}>
+                {{ emp.name }} - {{ emp.employee_code }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="start_date" class="form-label">تاريخ بداية التخصيص</label>
+        <input type="date" id="start_date" name="start_date" class="form-control" required
+            value="{{ assignment.start_date.strftime('%Y-%m-%d') }}">
+    </div>
+
+    <div class="mb-3">
+        <label for="end_date" class="form-label">تاريخ نهاية التخصيص (اختياري)</label>
+        <input type="date" id="end_date" name="end_date" class="form-control"
+            value="{{ assignment.end_date.strftime('%Y-%m-%d') if assignment.end_date else '' }}">
+    </div>
+
+    <div class="mb-3">
+        <label for="assignment_type" class="form-label">نوع التسكين</label>
+        <select id="assignment_type" name="assignment_type" class="form-select" required>
+            <option value="permanent" {% if assignment.assignment_type == 'permanent' %}selected{% endif %}>ثابت</option>
+            <option value="rotating" {% if assignment.assignment_type == 'rotating' %}selected{% endif %}>تناوب</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">حفظ التعديل</button>
+    <a href="{{ url_for('main.assignments') }}" class="btn btn-secondary">إلغاء</a>
+</form>
+
+{% endblock %}

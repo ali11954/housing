@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+{% block title %}تقارير السكنات{% endblock %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <!-- العنوان وأزرار التصدير -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="m-0 text-center flex-grow-1 text-primary">تقرير السكنات</h1>
+        <div class="ms-3">
+            <a class="btn btn-success btn-sm shadow-sm" href="{{ url_for('main.housing_report_excel') }}">
+                <i class="fas fa-file-excel"></i> تصدير Excel
+            </a>
+            <a class="btn btn-danger btn-sm shadow-sm" href="{{ url_for('main.housing_report_pdf') }}">
+                <i class="fas fa-file-pdf"></i> تصدير PDF
+            </a>
+        </div>
+    </div>
+
+    <!-- ملخص السكنات -->
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-header bg-light-blue text-white py-3">
+            <h2 class="mb-0">ملخص السكنات</h2>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-bordered table-hover mb-0">
+                <thead class="table-light-blue text-white">
+                    <tr>
+                        <th>السكن</th>
+                        <th class="text-center">عدد الغرف</th>
+                        <th class="text-center">عدد الأسرة الكلي</th>
+                        <th class="text-center">الأسرّة المشغولة</th>
+                        <th class="text-center">الأسرّة الفارغة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set total_rooms = 0 %}
+                    {% set total_beds = 0 %}
+                    {% set total_occupied = 0 %}
+                    {% set total_vacant = 0 %}
+
+                    {% for housing in housings %}
+                        {% set total_rooms = total_rooms + (housing.rooms_count|int) %}
+                        {% set total_beds = total_beds + (housing.total_beds|int) %}
+                        {% set total_occupied = total_occupied + (housing.occupied_beds|int) %}
+                        {% set total_vacant = total_vacant + (housing.available_beds|int) %}
+
+                        <tr>
+                            <td class="fw-bold">{{ housing.name }}</td>
+                            <td class="text-center">{{ housing.rooms_count_calc }}</td>
+                            <td class="text-center">{{ housing.total_beds_calc }}</td>
+                            <td class="text-center occupied">{{ housing.occupied_beds_calc }}</td>
+                            <td class="text-center vacant">{{ housing.available_beds_calc }}</td>
+                        </tr>
+                    {% endfor %}
+
+                    <!-- صف الإجمالي -->
+                    <tr class="table-light fw-bold">
+                        <td>الإجمالي</td>
+                        <td class="text-center">{{ total_rooms }}</td>
+                        <td class="text-center">{{ total_beds }}</td>
+                        <td class="text-center">{{ total_occupied }}</td>
+                        <td class="text-center">{{ total_vacant }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- تفاصيل الغرف -->
+    {% for housing in housings %}
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-header bg-light-purple text-white py-3 d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">تفاصيل الغرف في السكن: {{ housing.name }}</h2>
+            <button class="btn btn-light btn-sm toggle-all" data-housing="{{ housing.id }}">
+                <i class="fas fa-expand-arrows-alt"></i> فتح/غلق جميع الغرف
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-bordered table-hover mb-0">
+                <thead class="table-light-purple text-white">
+                    <tr>
+                        <th style="width: 40px;"></th>
+                        <th>الغرفة</th>
+                        <th class="text-center">عدد الأسرة</th>
+                        <th class="text-center">الأسرّة المشغولة</th>
+                        <th class="text-center">الأسرّة الفارغة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for room in housing.rooms %}
+                    <tr class="room-header" data-target="#details-{{ room.id }}">
+                        <td class="text-center toggle-icon"><i class="fas fa-chevron-right"></i></td>
+                        <td class="fw-medium">{{ room.room_number }}</td>
+                        <td class="text-center">{{ room.total_beds }}</td>
+                        <td class="text-center occupied">{{ room.occupied_beds }}</td>
+                        <td class="text-center">{{ room.total_beds - room.occupied_beds }}</td>
+                    </tr>
+                    <tr class="room-details collapse" id="details-{{ room.id }}" data-housing="{{ housing.id }}">
+                        <td colspan="5" class="p-0">
+                            <div class="p-3 bg-light">
+                                <table class="table table-bordered mb-0 bg-white">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>رقم السرير</th>
+                                            <th>الحالة</th>
+                                            <th>الموظف الحالي</th>
+                                            <th>التفاصيل</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for bed in room.beds %}
+                                        <tr>
+                                            <td>{{ bed.bed_number }}</td>
+                                            <td>
+                                                {% if bed.is_occupied %}
+                                                <span class="badge bg-danger">مشغول</span>
+                                                {% else %}
+                                                <span class="badge bg-success">فارغ</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% set emp = bed.current_employee() %}
+                                                {% if emp %}
+                                                    {{ emp.name }} <br> <small class="text-muted">كود: {{ emp.employee_code }}</small>
+                                                {% else %}
+                                                    <span class="text-muted">لا يوجد موظف</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bedModal{{ bed.id }}">
+                                                    <i class="fas fa-info-circle"></i> التفاصيل
+                                                </button>
+
+                                                <!-- Modal -->
+                                                <div class="modal fade" id="bedModal{{ bed.id }}" tabindex="-1" aria-labelledby="bedModalLabel{{ bed.id }}" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header bg-light-blue text-white">
+                                                                <h5 class="modal-title">تفاصيل السرير رقم {{ bed.bed_number }}</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="mb-3">
+                                                                    <strong>الحالة:</strong>
+                                                                    {% if bed.is_occupied %}
+                                                                        <span class="badge bg-danger">مشغول</span>
+                                                                    {% else %}
+                                                                        <span class="badge bg-success">فارغ</span>
+                                                                    {% endif %}
+                                                                </div>
+                                                                {% if emp %}
+                                                                    <div class="mb-2"><strong>الموظف الحالي:</strong> {{ emp.name }}</div>
+                                                                    <div class="mb-2"><strong>كود الموظف:</strong> {{ emp.employee_code }}</div>
+                                                                    <div class="mb-2"><strong>المسمى الوظيفي:</strong> {{ emp.job_title }}</div>
+                                                                    <div class="mb-2"><strong>القسم:</strong> {{ emp.department }}</div>
+                                                                {% else %}
+                                                                    <p class="text-muted">لا يوجد موظف حالي على هذا السرير</p>
+                                                                {% endif %}
+                                                            </div>
+                                                            {% set assignment = bed.current_assignment() %}
+                                                            <div class="modal-footer">
+                                                                {% if assignment %}
+                                                                <form method="POST" action="{{ url_for('main.cancel_bed_assignment', assignment_id=assignment.id) }}">
+                                                                    <button type="submit" class="btn btn-danger">
+                                                                        <i class="fas fa-times"></i> إلغاء
+                                                                    </button>
+                                                                </form>
+                                                                {% endif %}
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                                    <i class="fas fa-times"></i> إغلاق
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+<style>
+    :root {
+        --light-blue: #4a90e2;
+        --light-purple: #9b59b6;
+        --light-green: #2ecc71;
+        --light-orange: #e67e22;
+        --light-gray: #f8f9fa;
+    }
+
+    .bg-light-blue {
+        background-color: var(--light-blue) !important;
+    }
+
+    .bg-light-purple {
+        background-color: var(--light-purple) !important;
+    }
+
+    .table-light-blue {
+        background-color: var(--light-blue) !important;
+    }
+
+    .table-light-purple {
+        background-color: var(--light-purple) !important;
+    }
+
+    .table thead th {
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .occupied {
+        background-color: #ffebee !important;
+        color: #c62828 !important;
+        font-weight: bold;
+        border-radius: 4px;
+        padding: 4px 8px;
+        display: inline-block;
+    }
+
+    .vacant {
+        background-color: #e8f5e9 !important;
+        color: #2e7d32 !important;
+        font-weight: bold;
+        border-radius: 4px;
+        padding: 4px 8px;
+        display: inline-block;
+    }
+
+    .toggle-icon {
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+
+    .room-header:hover {
+        background-color: #f8f9fa !important;
+        cursor: pointer;
+    }
+
+    .room-details.show .toggle-icon i {
+        transform: rotate(90deg);
+    }
+
+    .card {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        border-radius: 0 !important;
+    }
+
+    .btn {
+        border-radius: 6px;
+    }
+
+    .badge {
+        font-size: 0.8rem;
+        padding: 0.35em 0.65em;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // طي/فتح تفاصيل غرفة فردية
+    document.querySelectorAll('.room-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            let target = document.querySelector(header.dataset.target);
+            let collapse = new bootstrap.Collapse(target, { toggle: true });
+            let icon = header.querySelector('.toggle-icon i');
+
+            // تغيير اتجاه السهم
+            if (target.classList.contains('show')) {
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            }
+        });
+    });
+
+    // فتح/غلق جميع الغرف في سكن محدد
+    document.querySelectorAll('.toggle-all').forEach(function(button) {
+        button.addEventListener('click', function() {
+            let housingId = button.dataset.housing;
+            let detailsRows = document.querySelectorAll(`.room-details[data-housing='${housingId}']`);
+            let allOpen = Array.from(detailsRows).every(row => row.classList.contains('show'));
+
+            detailsRows.forEach(row => {
+                let collapse = new bootstrap.Collapse(row, { toggle: false });
+                allOpen ? collapse.hide() : collapse.show();
+            });
+
+            // تحديث الأيقونات
+            document.querySelectorAll(`.room-header[data-target^='#details-'] .toggle-icon i`).forEach(icon => {
+                if (allOpen) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-right');
+                } else {
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-chevron-down');
+                }
+            });
+        });
+    });
+});
+</script>
+
+{% endblock %}

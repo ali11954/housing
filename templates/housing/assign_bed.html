@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}تخصيص السرير للموظف{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 600px;">
+  <h2 class="mb-4">تخصيص السرير رقم {{ bed.bed_number }} في الغرفة {{ bed.room.room_number }}</h2>
+
+  <form method="POST" novalidate>
+    <div class="mb-3">
+      <label for="employee_id" class="form-label">اختر الموظف</label>
+      <select class="form-select" id="employee_id" name="employee_id" required>
+        <option value="" disabled {% if not request.form.get('employee_id') %}selected{% endif %}>اختر الموظف</option>
+        {% for emp in employees %}
+          <option value="{{ emp.id }}" {% if request.form.get('employee_id') == emp.id|string %}selected{% endif %}>{{ emp.name }} - {{ emp.employee_code }}</option>
+        {% endfor %}
+      </select>
+      <div class="invalid-feedback">الرجاء اختيار موظف.</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="start_date" class="form-label">تاريخ بداية التخصيص</label>
+      <input type="date" class="form-control" id="start_date" name="start_date" required
+             value="{{ request.form.get('start_date', '') or (now()|date('Y-m-d')) }}">
+      <div class="invalid-feedback">الرجاء إدخال تاريخ بداية التخصيص.</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="end_date" class="form-label">تاريخ نهاية التخصيص (اختياري)</label>
+      <input type="date" class="form-control" id="end_date" name="end_date"
+             value="{{ request.form.get('end_date', '') }}">
+    </div>
+
+    <div class="mb-3">
+      <label for="assignment_type" class="form-label">نوع التسكين</label>
+      <select class="form-select" id="assignment_type" name="assignment_type" required>
+        <option value="" disabled {% if not request.form.get('assignment_type') %}selected{% endif %}>اختر نوع التسكين</option>
+        <option value="permanent" {% if request.form.get('assignment_type') == 'permanent' %}selected{% endif %}>ثابت</option>
+        <option value="rotating" {% if request.form.get('assignment_type') == 'rotating' %}selected{% endif %}>تناوب</option>
+      </select>
+      <div class="invalid-feedback">الرجاء اختيار نوع التسكين.</div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-success">تخصيص</button>
+      <a href="{{ url_for('main.room_beds', room_id=bed.room.id) }}" class="btn btn-outline-secondary">إلغاء</a>
+    </div>
+  </form>
+</div>
+
+<script>
+(() => {
+  'use strict'
+  const forms = document.querySelectorAll('form')
+  Array.from(forms).forEach(form => {
+    form.addEventListener('submit', event => {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+</script>
+{% endblock %}

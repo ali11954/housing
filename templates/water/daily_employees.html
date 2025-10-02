@@ -1,0 +1,991 @@
+{% extends 'base.html' %}
+{% block content %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تقرير حضور الموظفين</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #4A90E2;
+            --primary-light: #7BB4F5;
+            --primary-dark: #2A6FC9;
+            --secondary-color: #6C63FF;
+            --accent-color: #36D1DC;
+            --success-color: #4BB543;
+            --danger-color: #E53E3E;
+            --warning-color: #FFB74D;
+            --info-color: #4FC3F7;
+            --light-bg: #F8FAFC;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --card-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+            --border-radius: 16px;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            color: #2D3748;
+            line-height: 1.6;
+            font-size: 0.85rem;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 1.5rem 0;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-color), var(--primary-light));
+        }
+
+        .header h1 {
+            font-weight: 700;
+            font-size: 1.6rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .header h1 i {
+            margin-left: 12px;
+            font-size: 1.8rem;
+            opacity: 0.9;
+        }
+
+        /* بطاقات الإحصائيات */
+        .stats-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            text-align: center;
+            padding: 1.2rem;
+            height: 100%;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-hover);
+        }
+
+        .stats-icon {
+            font-size: 2rem;
+            margin-bottom: 0.8rem;
+            opacity: 0.9;
+        }
+
+        .stats-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0.3rem 0;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stats-label {
+            font-size: 0.85rem;
+            color: #64748B;
+            font-weight: 500;
+        }
+
+        /* بطاقات الشركات */
+        .company-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .company-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--card-hover);
+        }
+
+        .company-card .card-header {
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
+            border: none;
+            padding: 1rem 1.2rem;
+            color: white;
+        }
+
+        .company-card .card-header h5 {
+            margin: 0;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            font-size: 1.1rem;
+        }
+
+        /* تصميم الجدول المحسن - استغلال كامل للعرض */
+        .attendance-table-container {
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            width: 100%;
+        }
+
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            background: white;
+            table-layout: fixed;
+        }
+
+        .attendance-table th {
+            background: linear-gradient(135deg, var(--light-bg), #f1f5f9);
+            color: var(--primary-dark);
+            font-weight: 600;
+            padding: 0.6rem;
+            text-align: center;
+            border-bottom: 2px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .attendance-table td {
+            padding: 0.5rem;
+            text-align: center;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .attendance-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        /* تصميم أيام الشهر - صفين منفصلين */
+        .day-header-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 45px;
+        }
+
+        .day-number {
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: var(--primary-dark);
+        }
+
+        .day-name {
+            font-size: 0.65rem;
+            color: #64748B;
+            margin-top: 2px;
+        }
+
+        .day-cell {
+            min-width: 22px;
+            max-width: 22px;
+            padding: 2px !important;
+            border-left: 1px solid #f1f5f9;
+        }
+
+        /* مؤشرات الحضور */
+        .attendance-indicator {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            border-radius: 3px;
+            margin: 0;
+            transition: var(--transition);
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .attendance-indicator:hover {
+            transform: scale(1.3);
+            border-color: rgba(0,0,0,0.1);
+        }
+
+        .present {
+            background: linear-gradient(135deg, var(--success-color), #67C23A);
+        }
+
+        .absent {
+            background: linear-gradient(135deg, var(--danger-color), #F56C6C);
+        }
+
+        /* معدل الحضور */
+        .attendance-rate {
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 12px;
+            display: inline-block;
+            font-size: 0.7rem;
+            min-width: 55px;
+        }
+
+        .rate-high {
+            background: #f0f9ff;
+            color: var(--primary-color);
+            border: 1px solid #e1f5fe;
+        }
+
+        .rate-medium {
+            background: #fffbf0;
+            color: var(--warning-color);
+            border: 1px solid #fff3cd;
+        }
+
+        .rate-low {
+            background: #fef2f2;
+            color: var(--danger-color);
+            border: 1px solid #fed7d7;
+        }
+
+        /* أعمدة البيانات */
+        .employee-name {
+            width: 150px;
+            min-width: 150px;
+            max-width: 150px;
+            text-align: right;
+            padding: 0.6rem !important;
+        }
+
+        .job-title {
+            width: 110px;
+            min-width: 110px;
+            max-width: 110px;
+        }
+
+        .service-type {
+            width: 100px;
+            min-width: 100px;
+            max-width: 100px;
+        }
+
+        .present-days {
+            width: 80px;
+            min-width: 80px;
+            max-width: 80px;
+        }
+
+        .attendance-rate-col {
+            width: 70px;
+            min-width: 70px;
+            max-width: 70px;
+        }
+
+        /* الرسم البياني المحسن */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 1rem;
+        }
+
+        .chart-card {
+            height: 100%;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+        }
+
+        .chart-tabs {
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 5px;
+        }
+
+        .chart-tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #64748B;
+        }
+
+        .chart-tab.active {
+            border-bottom: 3px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+            font-size: 0.8rem;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+
+        /* بطاقة الفلترة */
+        .filter-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+        }
+
+        .filter-card .card-header {
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
+            border: none;
+            padding: 1rem 1.2rem;
+            color: white;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .input-group {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .input-group-text {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .form-control, .form-select {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            border-radius: 10px;
+            padding: 0.6rem 1.2rem;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+            font-size: 0.85rem;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(74, 144, 226, 0.4);
+        }
+
+        /* تأثيرات إضافية */
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .avatar-placeholder {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+
+        /* تحسينات للجوال */
+        @media (max-width: 1200px) {
+            .day-cell {
+                min-width: 20px;
+                max-width: 20px;
+            }
+
+            .attendance-indicator {
+                width: 14px;
+                height: 14px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.3rem;
+            }
+
+            .stats-number {
+                font-size: 1.5rem;
+            }
+
+            .day-cell {
+                min-width: 18px;
+                max-width: 18px;
+            }
+
+            .employee-name {
+                width: 130px;
+                min-width: 130px;
+                max-width: 130px;
+            }
+
+            .chart-container {
+                height: 300px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.1rem;
+            }
+
+            .day-cell {
+                min-width: 16px;
+                max-width: 16px;
+            }
+
+            .job-title, .service-type {
+                display: none;
+            }
+        }
+    </style>
+
+    <!-- الهيدر المحسن -->
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1>
+                        <i class="fas fa-calendar-alt"></i>
+                        تقرير حضور الموظفين الشهري
+                    </h1>
+                    <p class="mb-0 mt-2 opacity-90" style="font-size: 0.95rem;">تحليل تفصيلي لحضور الموظفين حسب الشركة والشهر ونوع الخدمة</p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <!-- فلترة الشهر ونوع الخدمة -->
+                    <form method="GET" class="filter-container">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                    <input type="month" class="form-control" name="month" value="{{ selected_month.strftime('%Y-%m') }}">
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text"><i class="fas fa-filter"></i></span>
+                                    <select class="form-select" name="service_type">
+                                        <option value="">جميع أنواع الخدمة</option>
+                                        {% for service_type in service_types %}
+                                        <option value="{{ service_type }}" {% if request.args.get('service_type') == service_type %}selected{% endif %}>
+                                            {{ service_type }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        {% if request.args.get('service_type') %}
+                                        <span class="badge bg-light text-dark" style="font-size: 0.75rem;">
+                                            <i class="fas fa-filter me-1"></i>
+                                            {{ request.args.get('service_type') }}
+                                            <a href="{{ url_for('main.employee_attendance_report', month=selected_month.strftime('%Y-%m')) }}" class="text-danger ms-1">
+                                                <i class="fas fa-times"></i>
+                                            </a>
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <button type="submit" class="btn btn-light btn-sm" style="font-size: 0.8rem;">
+                                        <i class="fas fa-search me-1"></i>تطبيق
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- بطاقات الإحصائيات -->
+        <div class="row mb-4 fade-in">
+            <div class="col-md-3 col-6 mb-3">
+                <div class="stats-card">
+                    <div class="stats-icon text-primary">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="stats-number">{{ companies_count }}</div>
+                    <div class="stats-label">عدد الشركات</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="stats-card">
+                    <div class="stats-icon text-success">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stats-number">{{ employees_count }}</div>
+                    <div class="stats-label">عدد الموظفين</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="stats-card">
+                    <div class="stats-icon text-info">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="stats-number">{{ grand_total_present }}</div>
+                    <div class="stats-label">إجمالي أيام الحضور</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="stats-card">
+                    <div class="stats-icon text-warning">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stats-number">{{ "%.1f"|format(grand_attendance_rate) }}%</div>
+                    <div class="stats-label">معدل الحضور العام</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- الرسم البياني لمقارنة الشركات -->
+        <div class="chart-card mb-4 fade-in">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    مقارنة معدلات الالتزام بالحضور بين الشركات
+                    {% if request.args.get('service_type') %}
+                    <span class="badge bg-info ms-2" style="font-size: 0.75rem;">نوع الخدمة: {{ request.args.get('service_type') }}</span>
+                    {% endif %}
+                </h5>
+                <div class="chart-tabs">
+                    <button class="chart-tab active" data-chart="bar">أعمدة</button>
+                    <button class="chart-tab" data-chart="doughnut">دائري</button>
+                    <button class="chart-tab" data-chart="polar">قطبي</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="companyChart"></canvas>
+                </div>
+                <div class="chart-legend" id="chartLegend"></div>
+            </div>
+        </div>
+
+        <!-- تقرير الشركات والموظفين -->
+        {% for company in table_data %}
+        <div class="company-card fade-in">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+                <h5 class="mb-1 mb-md-0">
+                    <i class="fas fa-building me-2"></i>{{ company.name }}
+                    {% if company.id and "none_" not in company.id|string %}
+                    <small class="opacity-80" style="font-size: 0.8rem;">(ID: {{ company.id }})</small>
+                    {% endif %}
+                </h5>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="badge bg-primary" style="font-size: 0.75rem;">الموظفين: {{ company.employees|length }}</span>
+                    <span class="badge bg-success" style="font-size: 0.75rem;">الحضور: {{ company.total_present }} يوم</span>
+                    <span class="badge bg-danger" style="font-size: 0.75rem;">الغياب: {{ company.total_absent }} يوم</span>
+                    <span class="badge bg-warning" style="font-size: 0.75rem;">المعدل: {{ "%.1f"|format(company.attendance_rate) }}%</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="attendance-table-container">
+                    <table class="attendance-table">
+                        <thead>
+                            <tr>
+                                <th class="employee-name">اسم الموظف</th>
+                                <th class="job-title">المسمى الوظيفي</th>
+                                <th class="service-type">نوع الخدمة</th>
+                                <th class="present-days">أيام الحضور</th>
+                                {% for day in days_in_month %}
+                                <th class="day-cell">
+                                    <div class="day-header-container">
+                                        <div class="day-number">{{ day.strftime('%d') }}</div>
+                                        <div class="day-name">{{ day.strftime('%a') }}</div>
+                                    </div>
+                                </th>
+                                {% endfor %}
+                                <th class="attendance-rate-col">معدل الحضور</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for employee in company.employees %}
+                            <tr>
+                                <td class="employee-name">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-placeholder bg-primary text-white me-2">
+                                            {{ employee.name[0] if employee.name else '?' }}
+                                        </div>
+                                        <div class="text-truncate">
+                                            <div class="fw-bold" style="font-size: 0.8rem;">{{ employee.name }}</div>
+                                            {% if employee.employee_code %}
+                                            <small class="text-muted" style="font-size: 0.65rem;">{{ employee.employee_code }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="job-title">{{ employee.job_title if employee.job_title else '-' }}</td>
+                                <td class="service-type">
+                                    {% if employee.service_type %}
+                                    <span class="badge bg-secondary" style="font-size: 0.65rem;">{{ employee.service_type }}</span>
+                                    {% else %}
+                                    <span class="badge bg-light text-dark" style="font-size: 0.65rem;">غير محدد</span>
+                                    {% endif %}
+                                </td>
+                                <td class="present-days fw-bold text-center">
+                                    {{ employee.present_days }}/{{ days_in_month|length }}
+                                </td>
+                                {% for status in employee.attendance %}
+                                <td class="day-cell">
+                                    <div class="attendance-indicator {{ 'present' if status == 1 else 'absent' }}"
+                                         title="اليوم {{ loop.index }} ({{ days_in_month[loop.index0].strftime('%Y-%m-%d') }}): {{ 'حاضر' if status == 1 else 'غائب' }}">
+                                    </div>
+                                </td>
+                                {% endfor %}
+                                <td class="text-center attendance-rate-col">
+                                    {% set rate_class = 'rate-high' if employee.attendance_rate >= 80 else 'rate-medium' if employee.attendance_rate >= 60 else 'rate-low' %}
+                                    <span class="attendance-rate {{ rate_class }}">{{ "%.1f"|format(employee.attendance_rate) }}%</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">لا توجد بيانات للعرض</h4>
+                <p class="text-muted">لم يتم العثور على أي سجلات حضور للشهر المحدد{% if request.args.get('service_type') %} ونوع الخدمة "{{ request.args.get('service_type') }}"{% endif %}</p>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- الإحصائيات النهائية -->
+        <div class="card mt-4 fade-in">
+            <div class="card-header bg-light">
+                <h5 class="mb-0" style="font-size: 1.1rem;">
+                    <i class="fas fa-chart-bar me-2"></i>ملخص التقرير النهائي - {{ selected_month.strftime('%B %Y') }}
+                    {% if request.args.get('service_type') %}
+                    <span class="badge bg-info ms-2" style="font-size: 0.75rem;">نوع الخدمة: {{ request.args.get('service_type') }}</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3 col-6 mb-3">
+                        <h3 class="text-primary">{{ employees_count }}</h3>
+                        <p class="text-muted">إجمالي الموظفين</p>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <h3 class="text-success">{{ grand_total_present }}</h3>
+                        <p class="text-muted">إجمالي أيام الحضور</p>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <h3 class="text-danger">{{ grand_total_absent }}</h3>
+                        <p class="text-muted">إجمالي أيام الغياب</p>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <h3 class="text-warning">{{ "%.1f"|format(grand_attendance_rate) }}%</h3>
+                        <p class="text-muted">معدل الحضور العام</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-5 py-4 bg-light text-center">
+        <div class="container">
+            <p class="mb-0" style="font-size: 0.85rem;">تم إنشاء التقرير في {{ now.strftime('%Y-%m-%d %H:%M') if now else selected_month.strftime('%Y-%m-%d') }}</p>
+            <p class="text-muted" style="font-size: 0.8rem;">نظام إدارة الحضور والانصراف</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // بيانات الشركات للرسم البياني
+        const companyData = {
+            labels: [{% for company in table_data %}"{{ company.name }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+            attendanceRates: [{% for company in table_data %}{{ company.attendance_rate }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            employeeCounts: [{% for company in table_data %}{{ company.employees|length }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            presentDays: [{% for company in table_data %}{{ company.total_present }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            absentDays: [{% for company in table_data %}{{ company.total_absent }}{% if not loop.last %}, {% endif %}{% endfor %}]
+        };
+
+        // إنشاء ألوان عشوائية للشركات
+        function generateColors(count) {
+            const colors = [];
+            for (let i = 0; i < count; i++) {
+                const hue = (i * 137.5) % 360;
+                colors.push(`hsl(${hue}, 70%, 60%)`);
+            }
+            return colors;
+        }
+
+        const companyColors = generateColors(companyData.labels.length);
+
+        // تكوين الرسم البياني
+        let currentChart = null;
+
+        function createChart(type) {
+            const ctx = document.getElementById('companyChart').getContext('2d');
+
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            let chartConfig;
+
+            switch(type) {
+                case 'bar':
+                    chartConfig = {
+                        type: 'bar',
+                        data: {
+                            labels: companyData.labels,
+                            datasets: [{
+                                label: 'معدل الالتزام بالحضور (%)',
+                                data: companyData.attendanceRates,
+                                backgroundColor: companyColors,
+                                borderColor: companyColors.map(color => color.replace('0.6', '1')),
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        afterLabel: function(context) {
+                                            const index = context.dataIndex;
+                                            return `عدد الموظفين: ${companyData.employeeCounts[index]}\nأيام الحضور: ${companyData.presentDays[index]}\nأيام الغياب: ${companyData.absentDays[index]}`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    title: {
+                                        display: true,
+                                        text: 'معدل الالتزام (%)'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'الشركات'
+                                    }
+                                }
+                            }
+                        }
+                    };
+                    break;
+
+                case 'doughnut':
+                    chartConfig = {
+                        type: 'doughnut',
+                        data: {
+                            labels: companyData.labels,
+                            datasets: [{
+                                data: companyData.attendanceRates,
+                                backgroundColor: companyColors,
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    rtl: true
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return ` ${context.label}: ${context.raw}%`;
+                                        },
+                                        afterLabel: function(context) {
+                                            const index = context.dataIndex;
+                                            return `الموظفين: ${companyData.employeeCounts[index]}\nالحضور: ${companyData.presentDays[index]} يوم`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    };
+                    break;
+
+                case 'polar':
+                    chartConfig = {
+                        type: 'polarArea',
+                        data: {
+                            labels: companyData.labels,
+                            datasets: [{
+                                data: companyData.attendanceRates,
+                                backgroundColor: companyColors,
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    rtl: true
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return ` ${context.label}: ${context.raw}%`;
+                                        },
+                                        afterLabel: function(context) {
+                                            const index = context.dataIndex;
+                                            return `الموظفين: ${companyData.employeeCounts[index]}\nالحضور: ${companyData.presentDays[index]} يوم`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    };
+                    break;
+            }
+
+            currentChart = new Chart(ctx, chartConfig);
+            updateLegend();
+        }
+
+        // تحديث وسيلة الإيضاح
+        function updateLegend() {
+            const legendContainer = document.getElementById('chartLegend');
+            legendContainer.innerHTML = '';
+            companyData.labels.forEach((label, index) => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.innerHTML = `
+                    <div class="legend-color" style="background-color: ${companyColors[index]}"></div>
+                    <span>${label}: ${companyData.attendanceRates[index]}%</span>
+                `;
+                legendContainer.appendChild(legendItem);
+            });
+        }
+
+        // تبديل بين أنواع الرسوم البيانية
+        document.querySelectorAll('.chart-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                createChart(this.dataset.chart);
+            });
+        });
+
+        // تهيئة الرسم البياني عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            createChart('bar');
+
+            // إضافة تأثيرات تفاعلية
+            const attendanceIndicators = document.querySelectorAll('.attendance-indicator');
+            attendanceIndicators.forEach(indicator => {
+                indicator.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.3)';
+                    this.style.transition = 'transform 0.2s';
+                });
+                indicator.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+
+            // تحديث النموذج عند تغيير القيم
+            document.querySelector('select[name="service_type"]').addEventListener('change', function() {
+                this.form.submit();
+            });
+
+            // تأثيرات للبطاقات
+            const statsCards = document.querySelectorAll('.stats-card');
+            statsCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-8px)';
+                });
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(-5px)';
+                });
+            });
+        });
+
+        // وظائف إضافية للرسم البياني
+        function downloadChart() {
+            const link = document.createElement('a');
+            link.download = 'معدلات-الحضور-الشركات.png';
+            link.href = document.getElementById('companyChart').toDataURL();
+            link.click();
+        }
+
+        // إضافة زر التحميل إذا كان مطلوباً
+        function addDownloadButton() {
+            const chartHeader = document.querySelector('.chart-card .card-header');
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'btn btn-sm btn-outline-primary';
+            downloadBtn.innerHTML = '<i class="fas fa-download me-1"></i>تحميل الرسم';
+            downloadBtn.onclick = downloadChart;
+            chartHeader.appendChild(downloadBtn);
+        }
+
+        // تفعيل زر التحميل بعد تحميل الصفحة
+        setTimeout(addDownloadButton, 1000);
+    </script>
+
+{% endblock %}

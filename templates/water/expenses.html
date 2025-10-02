@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-light-blue text-white py-3">
+          <h3 class="mb-0"><i class="fas fa-receipt me-2"></i>إدارة بنود المصروفات</h3>
+        </div>
+        <div class="card-body p-4">
+
+          <!-- نموذج إضافة بند جديد -->
+          <div class="add-item-card mb-4 p-4 rounded-3 bg-light">
+            <h5 class="mb-3 text-primary"><i class="fas fa-plus-circle me-2"></i>إضافة بند جديد</h5>
+            <form method="POST" action="{{ url_for('main.expenseItem_add') }}" class="row g-3">
+              <div class="col-md-3">
+                <label for="name" class="form-label">اسم البند</label>
+                <input type="text" name="name" class="form-control" placeholder="أدخل اسم البند" required>
+              </div>
+              <div class="col-md-3">
+                <label for="description" class="form-label">الوصف</label>
+                <input type="text" name="description" class="form-control" placeholder="أدخل الوصف">
+              </div>
+              <div class="col-md-2">
+                <label for="unit_qtr" class="form-label">وحدة القياس</label>
+                <input list="unit_options" name="unit_qtr" class="form-control" placeholder="اختر الوحدة">
+                <datalist id="unit_options">
+                  <option value="كيلو">
+                  <option value="جرام">
+                  <option value="وجبة">
+                  <option value="ساعة">
+                  <option value="عامل">
+                  <option value="عدد">
+                  <option value="غرفة">
+                </datalist>
+              </div>
+              <div class="col-md-2">
+                <label for="calculation_type" class="form-label">نوعية الاحتساب</label>
+                <select name="calculation_type" class="form-select">
+                  <option value="normal" selected>عادي</option>
+                  <option value="fixed">ثابت</option>
+                  <option value="percentage">نسبة</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label for="allowed_housings" class="form-label">السكنات المسموح بها</label>
+                <select name="allowed_housings" class="form-select" multiple>
+                  {% for housing in housings %}
+                    <option value="{{ housing.id }}">{{ housing.name }}</option>
+                  {% endfor %}
+                </select>
+                <small class="form-text text-muted">اضغط Ctrl لاختيار أكثر من سكن</small>
+              </div>
+              <div class="col-12 mt-3">
+                <button type="submit" class="btn btn-success px-4"><i class="fas fa-plus me-2"></i>إضافة البند</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- رسائل التنبيه -->
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show d-flex align-items-center" role="alert">
+                  <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} me-2"></i>
+                  <div>{{ message }}</div>
+                  <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+
+          <!-- جدول البنود -->
+          <div class="table-responsive">
+            <table class="table table-hover table-bordered align-middle text-center">
+              <thead class="table-light">
+                <tr>
+                  <th class="bg-light-blue text-white">الرقم</th>
+                  <th class="bg-light-blue text-white">اسم البند</th>
+                  <th class="bg-light-blue text-white">الوصف</th>
+                  <th class="bg-light-blue text-white">وحدة القياس</th>
+                  <th class="bg-light-blue text-white">نوعية الاحتساب</th>
+                  <th class="bg-light-blue text-white">السكنات المسموح بها</th>
+                  <th class="bg-light-blue text-white">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in items %}
+                <tr>
+                  <form method="POST" action="{{ url_for('main.expenseItem_edit', item_id=item.id) }}">
+                    <td class="fw-bold text-primary">{{ item.id }}</td>
+                    <td>
+                      <input type="text" name="name" value="{{ item.name }}" class="form-control form-control-sm" required>
+                    </td>
+                    <td>
+                      <input type="text" name="description" value="{{ item.description }}" class="form-control form-control-sm">
+                    </td>
+                    <td>
+                      <input list="unit_options" name="unit_qtr" value="{{ item.unit_qtr }}" class="form-control form-control-sm">
+                    </td>
+                    <td>
+                      <select name="calculation_type" class="form-select form-select-sm">
+                        <option value="normal" {% if item.calculation_type=='normal' %}selected{% endif %}>عادي</option>
+                        <option value="fixed" {% if item.calculation_type=='fixed' %}selected{% endif %}>ثابت</option>
+                        <option value="percentage" {% if item.calculation_type=='percentage' %}selected{% endif %}>نسبة</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select name="allowed_housings" class="form-select form-select-sm" multiple>
+                        {% for housing in housings %}
+                          <option value="{{ housing.id }}" {% if housing.id in item.housings|map(attribute='id')|list %}selected{% endif %}>
+                            {{ housing.name }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                    </td>
+                    <td class="d-flex gap-2 justify-content-center">
+                      <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-edit me-1"></i>تحديث</button>
+                  </form>
+                      <form action="{{ url_for('main.expenseItem_delete', item_id=item.id) }}" method="POST" style="display:inline-block">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('هل أنت متأكد من حذف هذا البند؟')">
+                          <i class="fas fa-trash me-1"></i>حذف
+                        </button>
+                      </form>
+                    </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {% if not items %}
+          <div class="text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <p class="text-muted">لا توجد بنود مصروفات مضافة حتى الآن</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  :root {
+    --light-blue: #4a90e2;
+    --light-blue-hover: #3a7bc8;
+  }
+
+  .bg-light-blue {
+    background-color: var(--light-blue) !important;
+  }
+
+  .btn-primary {
+    background-color: var(--light-blue);
+    border-color: var(--light-blue);
+  }
+
+  .btn-primary:hover {
+    background-color: var(--light-blue-hover);
+    border-color: var(--light-blue-hover);
+  }
+
+  .card {
+    border-radius: 10px;
+  }
+
+  .add-item-card {
+    border-left: 4px solid var(--light-blue);
+  }
+
+  .table th {
+    font-weight: 600;
+  }
+
+  .form-control, .form-select {
+    border-radius: 6px;
+  }
+
+  .form-control:focus, .form-select:focus {
+    border-color: var(--light-blue);
+    box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25);
+  }
+</style>
+
+<!-- تأكد من تضمين Font Awesome للأيقونات -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+{% endblock %}

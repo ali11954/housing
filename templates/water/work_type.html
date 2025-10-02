@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- رأس الصفحة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        نظام تحضير الموظفين - إدارة الدوام
+                    </h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلترة البيانات -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="GET" class="filter-form">
+                        <div class="row g-3 align-items-end">
+                            <!-- فلترة التاريخ -->
+                            <div class="col-md-3">
+                                <label class="form-label">تاريخ التحضير</label>
+                                <input type="date" class="form-control" name="attendance_date"
+                                       value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                            </div>
+
+                            <!-- فلترة نوع الدوام -->
+                            <div class="col-md-3">
+                                <label class="form-label">نوع الدوام</label>
+                                <select class="form-select" name="work_type">
+                                    <option value="">جميع أنواع الدوام</option>
+                                    {% for wt in work_types %}
+                                    <option value="{{ wt }}" {% if request.args.get('work_type') == wt %}selected{% endif %}>
+                                        {{ wt }} - ({{ work_type_schedule[wt][0] }}/{{ work_type_schedule[wt][1] }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- فلترة السكن -->
+                            <div class="col-md-3">
+                                <label class="form-label">موقع السكن</label>
+                                <select class="form-select" name="housing_location">
+                                    <option value="">جميع المواقع</option>
+                                    {% for location in housing_locations %}
+                                    <option value="{{ location }}" {% if request.args.get('housing_location') == location %}selected{% endif %}>
+                                        {{ location }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- أزرار التحكم -->
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-filter me-1"></i>تطبيق الفلترة
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card-group">
+                <div class="card text-white bg-success">
+                    <div class="card-body text-center">
+                        <h4 class="card-title">{{ stats.active_employees }}</h4>
+                        <p class="card-text">موظف نشط</p>
+                    </div>
+                </div>
+                <div class="card text-white bg-warning">
+                    <div class="card-body text-center">
+                        <h4 class="card-title">{{ stats.on_leave }}</h4>
+                        <p class="card-text">في إجازة</p>
+                    </div>
+                </div>
+                <div class="card text-white bg-info">
+                    <div class="card-body text-center">
+                        <h4 class="card-title">{{ stats.total_employees }}</h4>
+                        <p class="card-text">إجمالي الموظفين</p>
+                    </div>
+                </div>
+                <div class="card text-white bg-secondary">
+                    <div class="card-body text-center">
+                        <h4 class="card-title">{{ stats.occupancy_rate }}%</h4>
+                        <p class="card-text">نسبة الإشغال</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول التحضير -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">قائمة الموظفين - {{ selected_date.strftime('%Y-%m-%d') }}</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="printTable()">
+                                <i class="fas fa-print me-1"></i>طباعة
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel me-1"></i>تصدير
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0" id="attendanceTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>#</th>
+                                    <th>كود الموظف</th>
+                                    <th>اسم الموظف</th>
+                                    <th>الوظيفة</th>
+                                    <th>نوع الدوام</th>
+                                    <th>تاريخ بداية الدوام</th>
+                                    <th>موقع السكن</th>
+                                    <th>الغرفة/السرير</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assignment in assignments %}
+                                {% set employee = assignment.employee %}
+                                {% set status = employee.get_employee_status(assignment.start_date, employee.work_type) %}
+                                <tr class="{% if status == 'نشط' %}table-success{% elif status == 'إجازة' %}table-warning{% endif %}">
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ employee.employee_code }}</td>
+                                    <td>
+                                        <strong>{{ employee.name }}</strong>
+                                        {% if employee.company %}
+                                        <br><small class="text-muted">{{ employee.company.name }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ employee.job_title or '-' }}</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ employee.work_type }}</span>
+                                        <br>
+                                        {% set schedule = work_type_schedule.get(employee.work_type or "DEFAULT", (6, 1)) %}
+<small>{{ schedule[0] }}/{{ schedule[1] }}</small>
+
+                                    </td>
+                                    <td>{{ assignment.start_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        {% if assignment.bed and assignment.bed.room and assignment.bed.room.housing_unit %}
+                                        {{ assignment.bed.room.housing_unit.name }}
+                                        {% else %}
+                                        <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if assignment.bed and assignment.bed.room %}
+                                        غرفة {{ assignment.bed.room.room_number }} - سرير {{ assignment.bed.bed_number }}
+                                        {% else %}
+                                        <span class="text-muted">غير محدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if status == 'نشط' %}bg-success{% elif status == 'إجازة' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            {{ status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary"
+                                                    onclick="viewEmployeeDetails({{ employee.id }})"
+                                                    title="عرض التفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-outline-warning"
+                                                    onclick="editAssignment({{ assignment.id }})"
+                                                    title="تعديل التخصيص">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال عرض التفاصيل -->
+<div class="modal fade" id="employeeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تفاصيل الموظف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="employeeDetails">
+                <!-- سيتم تحميل المحتوى عبر AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.table-responsive { max-height: 70vh; }
+.badge { font-size: 0.8em; }
+.card-group .card { margin: 0 5px; }
+</style>
+
+<script>
+function viewEmployeeDetails(employeeId) {
+    fetch(`/employee/${employeeId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('employeeDetails').innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>الاسم:</strong> ${data.name}</p>
+                        <p><strong>كود الموظف:</strong> ${data.employee_code}</p>
+                        <p><strong>الوظيفة:</strong> ${data.job_title}</p>
+                        <p><strong>الإدارة:</strong> ${data.department}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>نوع الدوام:</strong> <span class="badge bg-info">${data.work_type}</span></p>
+                        <p><strong>نوع الخدمة:</strong> ${data.service_type}</p>
+                        <p><strong>الشركة:</strong> ${data.company_name}</p>
+                        <p><strong>حالة اليوم:</strong> <span class="badge ${data.status === 'نشط' ? 'bg-success' : 'bg-warning'}">${data.status}</span></p>
+                    </div>
+                </div>
+            `;
+            new bootstrap.Modal(document.getElementById('employeeModal')).show();
+        });
+}
+
+function printTable() {
+    window.print();
+}
+
+function exportToExcel() {
+    // تنفيذ تصدير إلى Excel
+    alert('سيتم تنفيذ التصدير إلى Excel');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,437 @@
+{% extends 'base.html' %}
+{% block title %}إدارة الأصول{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- رأس الصفحة -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1 text-primary">إدارة الأصول</h2>
+            <p class="text-muted">إضافة وتعديل وحذف الأصول في النظام</p>
+        </div>
+        <div class="badge bg-info fs-6">
+            <i class="fas fa-cubes me-1"></i> {{ assets|length }} أصل
+        </div>
+    </div>
+
+    <!-- بطاقة الإجراءات السريعة -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addAssetModal">
+                    <i class="fas fa-plus-circle me-1"></i> إضافة أصل جديد
+                </button>
+                <a href="{{ url_for('main.assets_reports_dashboard') }}" class="btn btn-info">
+                    <i class="fas fa-chart-bar me-1"></i> تقارير الأصول
+                </a>
+                <a href="{{ url_for('main.link_asset_to_housing') }}" class="btn btn-warning">
+                    <i class="fas fa-link me-1"></i> ربط الأصول
+                </a>
+                <div class="ms-auto">
+                    <div class="input-group">
+                        <input type="text" id="searchInput" class="form-control" placeholder="ابحث في الأصول...">
+                        <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+    <div class="row mb-4">
+        <div class="col-md-2 col-6">
+            <div class="card bg-primary text-white">
+                <div class="card-body py-3 text-center">
+                    <h5 class="mb-0">{{ assets|length }}</h5>
+                    <small>إجمالي الأصول</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card bg-success text-white">
+                <div class="card-body py-3 text-center">
+                    <h5 class="mb-0">{{ assets|selectattr('status', 'equalto', 'جيد')|list|length }}</h5>
+                    <small>جيدة</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card bg-warning text-white">
+                <div class="card-body py-3 text-center">
+                    <h5 class="mb-0">{{ assets|selectattr('status', 'equalto', 'يحتاج صيانة')|list|length }}</h5>
+                    <small>تحتاج صيانة</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card bg-danger text-white">
+                <div class="card-body py-3 text-center">
+                    <h5 class="mb-0">{{ assets|selectattr('status', 'equalto', 'معطل')|list|length }}</h5>
+                    <small>معطلة</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card bg-info text-white">
+                <div class="card-body py-3 text-center">
+                    <h5 class="mb-0">{{ linked_assets_count if linked_assets_count is defined else 0 }}</h5>
+                    <small>مرتبطة</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card bg-secondary text-white">
+                <div class="card-body py-3 text-center">
+                    <h5 class="mb-0">{{ (assets|length) - (linked_assets_count if linked_assets_count is defined else 0) }}</h5>
+                    <small>غير مرتبطة</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقة جدول الأصول -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>قائمة الأصول</h5>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-dark me-2">{{ assets|length }} عنصر</span>
+                <select class="form-select form-select-sm" id="statusFilter" style="width: auto;">
+                    <option value="">جميع الحالات</option>
+                    <option value="جيد">جيد</option>
+                    <option value="يحتاج صيانة">يحتاج صيانة</option>
+                    <option value="معطل">معطل</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="assetsTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th width="120" data-sort="asset_number">رقم الأصل <i class="fas fa-sort ms-1"></i></th>
+                            <th data-sort="asset_name">اسم الأصل <i class="fas fa-sort ms-1"></i></th>
+                            <th width="200">الوصف</th>
+                            <th width="120" data-sort="asset_type">النوع <i class="fas fa-sort ms-1"></i></th>
+                            <th width="120" data-sort="purchase_date">تاريخ الشراء <i class="fas fa-sort ms-1"></i></th>
+                            <th width="120" data-sort="status">الحالة <i class="fas fa-sort ms-1"></i></th>
+                            <th width="200" class="text-center">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asset in assets %}
+                        <tr data-status="{{ asset.status }}">
+                            <td>
+                                <span class="badge bg-secondary">{{ asset.asset_number }}</span>
+                            </td>
+                            <td class="fw-bold">{{ asset.asset_name }}</td>
+                            <td>
+                                <span class="text-truncate d-inline-block" style="max-width: 200px;"
+                                      title="{{ asset.asset_description }}">
+                                    {{ asset.asset_description or "لا يوجد وصف" }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge
+                                    {% if asset.asset_type == 'أثاث' %}bg-info
+                                    {% elif asset.asset_type == 'أجهزة كهربائية' %}bg-warning
+                                    {% elif asset.asset_type == 'إلكترونيات' %}bg-success
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ asset.asset_type or "غير محدد" }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if asset.purchase_date %}
+                                <small class="text-muted">{{ asset.purchase_date.strftime('%Y-%m-%d') }}</small>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge
+                                    {% if asset.status == 'جيد' %}bg-success
+                                    {% elif asset.status == 'يحتاج صيانة' %}bg-warning
+                                    {% elif asset.status == 'معطل' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ asset.status or "غير محدد" }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('main.edit_asset', asset_id=asset.id) }}"
+                                       class="btn btn-outline-primary" title="تعديل الأصل">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ url_for('main.link_asset_to_housing', asset_id=asset.id) }}"
+                                       class="btn btn-outline-info" title="ربط الأصل">
+                                        <i class="fas fa-link"></i>
+                                    </a>
+                                    <!-- استخدام تعديل الأصل بدلاً من التفاصيل -->
+                                    <a href="{{ url_for('main.edit_asset', asset_id=asset.id) }}"
+                                       class="btn btn-outline-secondary" title="عرض التفاصيل">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <button type="button"
+                                            class="btn btn-outline-danger"
+                                            title="حذف الأصل"
+                                            onclick="confirmDelete({{ asset.id }}, '{{ asset.asset_name }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                                    <p class="mb-0">لا توجد أصول</p>
+                                    <small>استخدم زر "إضافة أصل جديد" لبدء الإضافة</small>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal إضافة أصل جديد -->
+<div class="modal fade" id="addAssetModal" tabindex="-1" aria-labelledby="addAssetModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('main.add_asset') }}" id="addAssetForm">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="addAssetModalLabel">
+                        <i class="fas fa-plus-circle me-2"></i>إضافة أصل جديد
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">رقم الأصل <span class="text-danger">*</span></label>
+                                <input type="text" name="asset_number" class="form-control" required
+                                       placeholder="أدخل رقم الأصل الفريد">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">اسم الأصل <span class="text-danger">*</span></label>
+                                <input type="text" name="asset_name" class="form-control" required
+                                       placeholder="أدخل اسم الأصل">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الوصف</label>
+                        <textarea name="asset_description" class="form-control" rows="3"
+                                  placeholder="وصف تفصيلي للأصل..."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">نوع الأصل</label>
+                                <select name="asset_type" class="form-select">
+                                    <option value="">اختر النوع...</option>
+                                    <option value="أثاث">أثاث</option>
+                                    <option value="أجهزة كهربائية">أجهزة كهربائية</option>
+                                    <option value="إلكترونيات">إلكترونيات</option>
+                                    <option value="أدوات">أدوات</option>
+                                    <option value="معدات">معدات</option>
+                                    <option value="أخرى">أخرى</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">حالة الأصل</label>
+                                <select name="status" class="form-select">
+                                    <option value="جيد">جيد</option>
+                                    <option value="يحتاج صيانة">يحتاج صيانة</option>
+                                    <option value="معطل">معطل</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">تاريخ الشراء</label>
+                        <input type="date" name="purchase_date" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-1"></i> حفظ الأصل
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- نموذج تأكيد الحذف -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">تأكيد الحذف</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="deleteMessage">هل أنت متأكد من أنك تريد حذف هذا الأصل؟</p>
+                <small class="text-danger">هذا الإجراء لا يمكن التراجع عنه</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="POST" action="" id="deleteForm" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// البحث والتصفية
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const clearSearch = document.getElementById('clearSearch');
+
+    function filterTable() {
+        const searchText = searchInput.value.toLowerCase();
+        const statusValue = statusFilter.value;
+
+        document.querySelectorAll('#assetsTable tbody tr').forEach(row => {
+            const rowText = row.textContent.toLowerCase();
+            const rowStatus = row.getAttribute('data-status');
+
+            const matchesSearch = searchText === '' || rowText.includes(searchText);
+            const matchesStatus = statusValue === '' || rowStatus === statusValue;
+
+            row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+        });
+    }
+
+    searchInput.addEventListener('input', filterTable);
+    statusFilter.addEventListener('change', filterTable);
+
+    clearSearch.addEventListener('click', function() {
+        searchInput.value = '';
+        filterTable();
+    });
+
+    // ترتيب الجدول
+    document.querySelectorAll('th[data-sort]').forEach(header => {
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', function() {
+            const table = this.closest('table');
+            const tbody = table.querySelector('tbody');
+            const columnIndex = Array.from(this.parentNode.cells).indexOf(this);
+            const rows = Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])'));
+
+            const isAscending = !this.classList.contains('asc');
+            this.classList.toggle('asc', isAscending);
+            this.classList.toggle('desc', !isAscending);
+
+            table.querySelectorAll('th[data-sort]').forEach(th => {
+                if (th !== this) {
+                    th.classList.remove('asc', 'desc');
+                }
+            });
+
+            rows.sort((a, b) => {
+                const aValue = a.cells[columnIndex].textContent.trim();
+                const bValue = b.cells[columnIndex].textContent.trim();
+
+                let comparison = 0;
+                if (!isNaN(aValue) && !isNaN(bValue)) {
+                    comparison = parseFloat(aValue) - parseFloat(bValue);
+                } else {
+                    comparison = aValue.localeCompare(bValue, 'ar');
+                }
+
+                return isAscending ? comparison : -comparison;
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+        });
+    });
+});
+
+// تأكيد الحذف
+function confirmDelete(assetId, assetName) {
+    document.getElementById('deleteMessage').textContent =
+        `هل أنت متأكد من أنك تريد حذف الأصل "${assetName}"؟`;
+    document.getElementById('deleteForm').action =
+        "{{ url_for('main.delete_asset', asset_id=0) }}".replace('0', assetId);
+
+    new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
+}
+</script>
+
+<style>
+.card {
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.table th {
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+}
+
+th[data-sort].asc i.fa-sort::before {
+    content: "\f0de";
+}
+
+th[data-sort].desc i.fa-sort::before {
+    content: "\f0dd";
+}
+
+@media (max-width: 768px) {
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .btn-group {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .btn-group .btn {
+        margin: 2px;
+    }
+
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

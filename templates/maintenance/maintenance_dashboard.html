@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة الصيانة{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2>لوحة الصيانة</h2>
+
+    <!-- أدوات التحكم العلوية -->
+    <div class="d-flex justify-content-between mb-3">
+        <div>
+            <a href="{{ url_for('main.new_request') }}" class="btn btn-success">إضافة طلب جديد</a>
+            <button class="btn btn-secondary" onclick="exportTableToExcel('requestsTable', 'طلبات_الصيانة')">تصدير Excel</button>
+            <button class="btn btn-secondary" onclick="window.print()">طباعة</button>
+        </div>
+        <div>
+            <input type="text" id="searchInput" class="form-control" placeholder="بحث سريع..." onkeyup="searchTable()">
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- الفلاتر الجانبية -->
+        <div class="col-md-3 mb-3">
+            <div class="card p-3">
+                <h5>فلترة الطلبات</h5>
+                <div class="mb-2">
+                    <label>الفريق</label>
+                    <select id="filter_team" class="form-select" onchange="filterTable()">
+                        <option value="">الكل</option>
+                        {% for team in requests|map(attribute='team')|unique %}
+                        <option value="{{ team }}">{{ team }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label>المسؤول</label>
+                    <select id="filter_responsible" class="form-select" onchange="filterTable()">
+                        <option value="">الكل</option>
+                        {% for resp in requests|map(attribute='responsible')|unique %}
+                        <option value="{{ resp }}">{{ resp }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label>نوع الصيانة</label>
+                    <select id="filter_type" class="form-select" onchange="filterTable()">
+                        <option value="">الكل</option>
+                        {% for t in requests|map(attribute='maintenance_type')|unique %}
+                        <option value="{{ t }}">{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label>الأولوية</label>
+                    <select id="filter_priority" class="form-select" onchange="filterTable()">
+                        <option value="">الكل</option>
+                        {% for p in requests|map(attribute='priority')|unique %}
+                        <option value="{{ p }}">{{ p }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="mb-2">
+    <label>الحالة</label>
+    <select id="filter_status" class="form-select" onchange="filterTable()">
+        <option value="">الكل</option>
+        <option value="تحت التنفيذ">تحت التنفيذ</option>
+        <option value="تم الإصلاح">تم الإصلاح</option>
+    </select>
+</div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- جدول الطلبات -->
+        <div class="col-md-9">
+            <table class="table table-bordered table-striped" id="requestsTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>الرقم</th>
+                        <th>عنوان الطلب</th>
+                                               <th>السكن</th>
+                        <th>الغرفة</th>
+                        <th>الفريق</th>
+                        <th>المسؤول</th>
+                        <th>التاريخ المجدول</th>
+                        <th>المدة (ساعات)</th>
+                        <th>الأولوية</th>
+                        <th>نوع الصيانة</th>
+                        <th>أمر التصنيع</th>
+                        <th>الملاحظات</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requests %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ req.title }}</td>
+                                               <td>{{ req.housing_id }}</td>
+                        <td>{{ req.room_id }}</td>
+                        <td>{{ req.team }}</td>
+                        <td>{{ req.responsible }}</td>
+                        <td>{{ req.scheduled_date }}</td>
+                        <td>{{ req.duration_hours }}</td>
+                        <td>{{ req.priority }}</td>
+                        <td>{{ req.maintenance_type }}</td>
+                        <td>{{ req.manufacturing_order }}</td>
+                        <td>{{ req.notes }}</td>
+                        <td>{{ req.status }}</td>
+
+                        <td>
+                            <a href="{{ url_for('main.edit_request', request_id=req.id) }}" class="btn btn-primary btn-sm">تعديل</a>
+                            <a href="{{ url_for('main.delete_request', request_id=req.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('هل أنت متأكد من الحذف؟')">حذف</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// فلترة متعددة
+function filterTable() {
+    var team = document.getElementById("filter_team").value.toLowerCase();
+    var resp = document.getElementById("filter_responsible").value.toLowerCase();
+    var type = document.getElementById("filter_type").value.toLowerCase();
+    var priority = document.getElementById("filter_priority").value.toLowerCase();
+
+    var table = document.getElementById("requestsTable");
+    var trs = table.getElementsByTagName("tr");
+
+    for (var i = 1; i < trs.length; i++) {
+        var tds = trs[i].getElementsByTagName("td");
+        var show = true;
+        if (team && !tds[2].innerText.toLowerCase().includes(team)) show = false;
+        if (resp && !tds[3].innerText.toLowerCase().includes(resp)) show = false;
+        if (type && !tds[7].innerText.toLowerCase().includes(type)) show = false;
+        if (priority && !tds[6].innerText.toLowerCase().includes(priority)) show = false;
+        trs[i].style.display = show ? "" : "none";
+    }
+}
+
+// بحث سريع
+function searchTable() {
+    var input = document.getElementById("searchInput").value.toLowerCase();
+    var table = document.getElementById("requestsTable");
+    var trs = table.getElementsByTagName("tr");
+    for (var i = 1; i < trs.length; i++) {
+        trs[i].style.display = trs[i].innerText.toLowerCase().includes(input) ? "" : "none";
+    }
+}
+
+// تصدير جدول إلى Excel
+function exportTableToExcel(tableID, filename = '') {
+    var downloadLink;
+    var dataType = 'application/vnd.ms-excel';
+    var tableSelect = document.getElementById(tableID);
+    var tableHTML = tableSelect.outerHTML.replace(/ /g, '%20');
+    filename = filename ? filename + '.xls' : 'excel_data.xls';
+    downloadLink = document.createElement("a");
+    document.body.appendChild(downloadLink);
+    downloadLink.href = 'data:' + dataType + ', ' + tableHTML;
+    downloadLink.download = filename;
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+}
+    function filterTable() {
+    var team = document.getElementById("filter_team").value.toLowerCase();
+    var resp = document.getElementById("filter_responsible").value.toLowerCase();
+    var type = document.getElementById("filter_type").value.toLowerCase();
+    var priority = document.getElementById("filter_priority").value.toLowerCase();
+    var status = document.getElementById("filter_status").value.toLowerCase(); // ← الحالة
+
+    var table = document.getElementById("requestsTable");
+    var trs = table.getElementsByTagName("tr");
+
+    for (var i = 1; i < trs.length; i++) {
+        var tds = trs[i].getElementsByTagName("td");
+        var show = true;
+        if (team && !tds[2].innerText.toLowerCase().includes(team)) show = false;
+        if (resp && !tds[3].innerText.toLowerCase().includes(resp)) show = false;
+        if (type && !tds[7].innerText.toLowerCase().includes(type)) show = false;
+        if (priority && !tds[6].innerText.toLowerCase().includes(priority)) show = false;
+        if (status && !tds[10].innerText.toLowerCase().includes(status)) show = false; // ← العمود 11 = الحالة
+        trs[i].style.display = show ? "" : "none";
+    }
+}
+
+</script>
+{% endblock %}

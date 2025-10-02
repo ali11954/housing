@@ -1,0 +1,31 @@
+document.getElementById('employee_search').addEventListener('input', function() {
+  let query = this.value.trim();
+  let resultsDiv = document.getElementById('search_results');
+
+  if (query.length < 2) {
+    resultsDiv.innerHTML = '';
+    return;
+  }
+
+  fetch(`/search_employee?q=${encodeURIComponent(query)}`)
+    .then(res => res.json())
+    .then(data => {
+      resultsDiv.innerHTML = '';
+      if (data.length > 0) {
+        data.forEach(emp => {
+          let item = document.createElement('a');
+          item.href = "#";
+          item.classList.add('list-group-item', 'list-group-item-action');
+          item.textContent = `${emp.code} - ${emp.name}`;
+          item.addEventListener('click', function(e) {
+            e.preventDefault();
+            resultsDiv.innerHTML = '';
+            // تعبئة الحقلين: الكود والبحث مع اسم + كود
+            document.getElementById('employee_id').value = emp.code;
+            document.getElementById('employee_search').value = `${emp.code} - ${emp.name}`;
+          });
+          resultsDiv.appendChild(item);
+        });
+      }
+    });
+});

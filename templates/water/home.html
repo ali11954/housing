@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-2">
+    <div class="text-center mb-2">
+        <h2>لوحة التحكم الرئيسية</h2>
+        <p class="text-muted">يرجى اختيار القسم الذي ترغب في إدارته</p>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-4 mb-3">
+            <a href="{{ url_for('manage_housing') }}" class="btn btn-primary w-100 py-3">إدارة السكنات</a>
+        </div>
+        <div class="col-md-4 mb-3">
+
+      <a href="{{ url_for('add_daily_resident') }}">تسجيل الساكنين اليومي</a>
+        </div>
+        <div class="col-md-4 mb-3">
+            <a href="{{ url_for('average_residents') }}" class="btn btn-secondary w-100 py-3">متوسط السكان الشهري</a>
+        </div>
+        <div class="col-md-4 mb-3">
+            <a href="{{ url_for('consumption') }}" class="btn btn-success w-100 py-3">استهلاك الخدمات</a>
+        </div>
+        <div class="col-md-4 mb-3">
+            <a href="{{ url_for('consumption_report') }}" class="btn btn-outline-primary w-100 py-3">📊 تقرير استهلاك السكنات</a>
+        </div>
+        <div class="col-md-4 mb-3">
+            <a href="{{ url_for('report') }}" class="btn btn-info w-100 py-3">عرض التقارير</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

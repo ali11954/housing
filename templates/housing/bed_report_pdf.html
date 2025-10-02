@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تقرير تخصيص الأسرة</title>
+<style>
+body { font-family: "Arial", sans-serif; direction: rtl; text-align: right; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+table, th, td { border: 1px solid black; }
+th, td { padding: 6px; text-align: right; }
+th { background-color: #444; color: white; }
+h2 { text-align: center; margin-bottom: 20px; }
+.alert { border: 1px solid #ccc; padding: 6px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<h2>تقرير تخصيص الأسرة</h2>
+<div class="alert">
+<strong>إجمالي الأسرة العام:</strong> {{ overall_summary.total_beds }} |
+<strong>إجمالي الموظفين العام:</strong> {{ overall_summary.total_employees }}
+</div>
+
+{% for housing_info in report_data %}
+<div class="alert">
+<strong>السكن: {{ housing_info.housing.name }}</strong> |
+إجمالي الأسرة: {{ housing_info.summary.total_beds }} |
+إجمالي الموظفين: {{ housing_info.summary.total_employees }}
+</div>
+<table>
+<thead>
+<tr>
+<th>الغرفة</th>
+<th>رقم السرير</th>
+<th>الموظفون المرتبطون</th>
+<th>نوع الدوام</th>
+<th>التناوب</th>
+</tr>
+</thead>
+<tbody>
+{% for item in housing_info.beds %}
+<tr>
+<td>{{ item.bed.room.room_number }}</td>
+<td>{{ item.bed.bed_number }}</td>
+<td>
+{% for a in item.assignments %}
+{{ a.employee_code }} - {{ a.employee_name }} ({{ a.start_date }}{% if a.end_date %} إلى {{ a.end_date }}{% endif %}) - {{ a.assignment_type }}<br>
+{% endfor %}
+</td>
+<td>
+{% for a in item.assignments %}
+{{ a.work_type or 'غير محدد' }}<br>
+{% endfor %}
+</td>
+<td>
+{% for a in item.assignments %}
+{{ a.rotation_info or '-' }}<br>
+{% endfor %}
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endfor %}
+</body>
+</html>

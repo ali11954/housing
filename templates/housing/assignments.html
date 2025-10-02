@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+{% block title %}تخصيص الأسرة{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- رأس الصفحة -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">تخصيص الأسرة</h2>
+        <div>
+            <a href="{{ url_for('main.assignments') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-right me-1"></i> العودة للرئيسية
+            </a>
+        </div>
+    </div>
+
+    <!-- بطاقة الفلتر -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>فلتر البيانات</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label for="company" class="form-label">اختر الشركة:</label>
+                    <select name="company_id" id="company" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- اختر الشركة --</option>
+                        {% for company in companies %}
+                        <option value="{{ company.id }}" {% if selected_company_id|int==company.id %}selected{% endif %}>
+                            {{ company.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 text-start">
+                    <a href="{{ url_for('main.bed_assign_add') }}" class="btn btn-success">
+                        <i class="fas fa-plus me-1"></i> إضافة تخصيص سرير جديد
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- جدول البيانات -->
+    {% if employees %}
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">قائمة تخصيصات الأسرة</h5>
+            <p class="text-muted mb-0">إجمالي النتائج: {{ employees|length }}</p>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th width="8%">الكود</th>
+                            <th width="12%">اسم الموظف</th>
+                            <th width="8%">الشركة</th>
+                            <th width="8%">السكن</th>
+                            <th width="6%">الغرفة</th>
+                            <th width="6%">السرير</th>
+                            <th width="8%">الوظيفة</th>
+                            <th width="8%">القسم</th>
+                            <th width="6%">الدوام</th>
+                            <th width="8%">تاريخ البدء</th>
+                            <th width="8%">تاريخ الانتهاء</th>
+                            <th width="6%">نوع التخصيص</th>
+                            <th width="6%">الحالة</th>
+                            <th width="12%">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in employees %}
+                        <tr>
+                            <td><strong>{{ e.employee_code }}</strong></td>
+                            <td>{{ e.employee_name }}</td>
+                            <td>{{ e.employee_company }}</td>
+                            <td>{{ e.housing_name }}</td>
+                            <td>{{ e.room_number }}</td>
+                            <td>{{ e.bed_number }}</td>
+                            <td>{{ e.job_title }}</td>
+                            <td>{{ e.department }}</td>
+                            <td>
+                                <span class="badge {% if e.work_type == 'دوام كامل' %}bg-primary{% else %}bg-info{% endif %}">
+                                    {{ e.work_type }}
+                                </span>
+                            </td>
+                            <td>{{ e.start_date }}</td>
+                            <td>
+                                {% if e.end_date %}
+                                {{ e.end_date }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ e.assignment_type }}</span>
+                            </td>
+                            <td>
+                                {% if e.status == "نشط" %}
+                                <span class="badge bg-success">نشط</span>
+                                {% elif e.status == "إجازة" %}
+                                <span class="badge bg-warning">إجازة</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ e.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column gap-1">
+                                    {% if e.bed_id %}
+                                    <!-- الموظف لديه تخصيص -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-primary dropdown-toggle w-100" type="button"
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                            نقل إلى سرير
+                                        </button>
+                                        <div class="dropdown-menu p-2" style="min-width: 250px;">
+                                            <form action="{{ url_for('main.transfer_employee', assignment_id=e.assignment_id) }}"
+                                                  method="POST" class="transfer-form">
+                                                <div class="mb-2">
+                                                    <label class="form-label small">اختر السرير الجديد:</label>
+                                                    <select name="new_bed_id" required class="form-select form-select-sm">
+                                                        {% for bed_option in all_beds %}
+                                                        {% if bed_option.id != e.bed_id %}
+                                                        <option value="{{ bed_option.id }}">
+                                                            {{ bed_option.room.housing_unit.name }} - غرفة {{ bed_option.room.room_number }} - سرير {{ bed_option.bed_number }}
+                                                        </option>
+                                                        {% endif %}
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <button type="submit" class="btn btn-warning btn-sm w-100">تأكيد النقل</button>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex gap-1">
+                                        <a href="{{ url_for('main.bed_assign_edit', assignment_id=e.assignment_id) }}"
+                                           class="btn btn-primary btn-sm flex-fill">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+
+                                        <form action="{{ url_for('main.cancel_bed_assignment', assignment_id=e.assignment_id) }}"
+                                              method="POST" class="flex-fill">
+                                            <button type="submit" class="btn btn-warning btn-sm w-100"
+                                                    title="إنهاء التخصيص">
+                                                <i class="fas fa-stop"></i>
+                                            </button>
+                                        </form>
+
+                                        <form action="{{ url_for('main.delete_bed_assignment', assignment_id=e.assignment_id) }}"
+                                              method="POST" class="flex-fill">
+                                            <button type="submit" class="btn btn-danger btn-sm w-100"
+                                                    onclick="return confirm('هل أنت متأكد من حذف هذا التخصيص؟')"
+                                                    title="حذف التخصيص">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                    {% else %}
+                                    <!-- الموظف بدون تخصيص -->
+                                    <a href="{{ url_for('main.bed_assign_add', employee_id=e.employee_id) }}"
+                                       class="btn btn-success btn-sm w-100">
+                                        <i class="fas fa-bed me-1"></i> إضافة تخصيص
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- حالة عدم وجود بيانات -->
+    <div class="text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-bed fa-3x text-muted"></i>
+        </div>
+        <h4 class="text-muted">لا توجد بيانات تخصيص أسرة</h4>
+        <p class="text-muted">لم يتم العثور على أي تخصيصات أسرة للشركة المحددة</p>
+        <a href="{{ url_for('main.bed_assign_add') }}" class="btn btn-primary mt-2">
+            <i class="fas fa-plus me-1"></i> إضافة تخصيص جديد
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- تحسينات CSS -->
+<style>
+    body {
+        direction: rtl;
+        text-align: right;
+    }
+
+    .table {
+        font-size: 0.9rem;
+    }
+
+    .table th {
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .transfer-form {
+        min-width: 200px;
+    }
+
+    .dropdown-menu {
+        text-align: right;
+    }
+
+    @media (max-width: 768px) {
+        .container-fluid {
+            padding: 1rem;
+        }
+
+        .table-responsive {
+            font-size: 0.8rem;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .d-flex.flex-column.gap-1 {
+            min-width: 120px;
+        }
+    }
+
+    /* تحسينات للعرض على الجوال */
+    @media (max-width: 576px) {
+        .card-header h5 {
+            font-size: 1.1rem;
+        }
+
+        .table th, .table td {
+            padding: 0.5rem;
+        }
+
+        .dropdown-menu {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 90% !important;
+        }
+    }
+</style>
+
+<!-- إضافة أيقونات FontAwesome -->
+<script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+
+<!-- إضافة Bootstrap JavaScript للعناصر التفاعلية -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// تأكيد قبل الحذف
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForms = document.querySelectorAll('form[action*="delete_bed_assignment"]');
+    deleteForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('هل أنت متأكد من أنك تريد حذف هذا التخصيص؟ لا يمكن التراجع عن هذا الإجراء.')) {
+                e.preventDefault();
+            }
+        });
+    });
+
+    // تأكيد قبل إنهاء التخصيص
+    const cancelForms = document.querySelectorAll('form[action*="cancel_bed_assignment"]');
+    cancelForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('هل أنت متأكد من إنهاء هذا التخصيص؟')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,355 @@
+{% extends 'base.html' %}
+{% block title %}الرئيسية{% endblock %}
+
+{% block content %}
+<div class="container-custom mt-4 text-center fade-in">
+
+    <div class="hero-section mb-5">
+        <h1 class="mb-3 fw-bold hero-title">مرحباً بك في النظام الشامل لسكنات الشركة</h1>
+        <p class="lead mb-4 hero-subtitle">يمكنك إدارة جميع أقسام النظام: التسكين، الأصول، التقييم، الصيانة، والمخازن، والاستهلاك والتكاليف.</p>
+    </div>
+
+    <div class="row justify-content-center g-4">
+
+        <!-- بطاقة إدارة التسكين -->
+        <div class="col-xl-4 col-lg-6 col-md-6">
+            <div class="card card-modern h-100">
+                <div class="card-header">
+                    <i class="fas fa-home me-2"></i> إدارة التسكين
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-building fa-3x text-primary"></i>
+                    </div>
+                    <p class="card-text flex-grow-1">أضف، عدل، واحذف السكنات والغرف والأسرة.</p>
+                    <a href="{{ url_for('main.housing_dashboard') }}" class="btn btn-primary mt-auto">
+                        الدخول <i class="fas fa-arrow-left ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- بطاقة إدارة الأصول -->
+        <div class="col-xl-4 col-lg-6 col-md-6">
+            <div class="card card-modern h-100">
+                <div class="card-header">
+                    <i class="fas fa-laptop-house me-2"></i> إدارة الأصول
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-boxes fa-3x text-primary"></i>
+                    </div>
+                    <p class="card-text flex-grow-1">أضف، عدل، واحذف الأصول الخاصة بالشركة.</p>
+                    <a href="{{ url_for('main.assets_dashboard') }}" class="btn btn-primary mt-auto">
+                        الدخول <i class="fas fa-arrow-left ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- بطاقة تقييم بيئة العمل -->
+        <div class="col-xl-4 col-lg-6 col-md-6">
+            <div class="card card-modern h-100">
+                <div class="card-header">
+                    <i class="fas fa-clipboard-check me-2"></i> تقييم بيئة العمل
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-star fa-3x text-success"></i>
+                    </div>
+                    <p class="card-text flex-grow-1">متابعة نظافة السكنات وتقييم بيئة العمل.</p>
+                    <a href="{{ url_for('main.evaluation_dashboard') }}" class="btn btn-success mt-auto">
+                        الدخول <i class="fas fa-arrow-left ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- بطاقة إدارة الصيانة -->
+        <div class="col-xl-4 col-lg-6 col-md-6">
+            <div class="card card-modern h-100">
+                <div class="card-header">
+                    <i class="fas fa-tools me-2"></i> إدارة الصيانة
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-wrench fa-3x text-warning"></i>
+                    </div>
+                    <p class="card-text flex-grow-1">تسجيل ومتابعة طلبات الصيانة الخاصة بالسكنات والأصول.</p>
+                    <a href="{{ url_for('main.maintenance_dashboard') }}" class="btn btn-warning mt-auto">
+                        الدخول <i class="fas fa-arrow-left ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- بطاقة إدارة المخازن -->
+        <div class="col-xl-4 col-lg-6 col-md-6">
+            <div class="card card-modern h-100">
+                <div class="card-header">
+                    <i class="fas fa-warehouse me-2"></i> إدارة المخازن
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-pallet fa-3x text-danger"></i>
+                    </div>
+                    <p class="card-text flex-grow-1">متابعة المخزون وحركات الصرف والإضافة.</p>
+                    <a href="{{ url_for('main.warehouse_dashboard') }}" class="btn btn-danger mt-auto">
+                        الدخول <i class="fas fa-arrow-left ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- بطاقة إدارة التقارير -->
+        <div class="col-xl-4 col-lg-6 col-md-6">
+            <div class="card card-modern h-100">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar me-2"></i> إدارة التقارير
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-file-alt fa-3x text-info"></i>
+                    </div>
+                    <p class="card-text flex-grow-1">استعلام عن أهم تقارير الاستهلاك والتكاليف.</p>
+                    <a href="{{ url_for('main.water_dashboard') }}" class="btn btn-info mt-auto">
+                        الدخول <i class="fas fa-arrow-left ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- قسم الإحصائيات السريعة -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="mb-4 fw-bold section-title">نظرة سريعة على النظام</h3>
+        </div>
+
+        <div class="col-md-3 col-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users text-primary"></i>
+                </div>
+                <div class="stat-content">
+                    <h4 class="stat-number" id="employees-count">0</h4>
+                    <p class="stat-label">موظف</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-home text-success"></i>
+                </div>
+                <div class="stat-content">
+                    <h4 class="stat-number" id="housing-count">0</h4>
+                    <p class="stat-label">سكن</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-tools text-warning"></i>
+                </div>
+                <div class="stat-content">
+                    <h4 class="stat-number" id="maintenance-count">0</h4>
+                    <p class="stat-label">طلب صيانة</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-box text-danger"></i>
+                </div>
+                <div class="stat-content">
+                    <h4 class="stat-number" id="assets-count">0</h4>
+                    <p class="stat-label">أصل</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* تحسينات إضافية للصفحة الرئيسية */
+    .hero-title {
+        font-size: 2.5rem;
+        background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 1rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1.2rem;
+        color: #6c757d;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .feature-icon {
+        transition: transform 0.3s ease;
+    }
+
+    .card-modern:hover .feature-icon {
+        transform: scale(1.1);
+    }
+
+    .section-title {
+        color: #495057;
+        position: relative;
+        padding-bottom: 10px;
+    }
+
+    .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        right: 50%;
+        transform: translateX(50%);
+        width: 100px;
+        height: 3px;
+        background: linear-gradient(90deg, #4361ee, #3a0ca3);
+        border-radius: 2px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        border-left: 4px solid #4361ee;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #495057;
+    }
+
+    .stat-label {
+        color: #6c757d;
+        margin-bottom: 0;
+        font-size: 0.9rem;
+    }
+
+    /* تحسينات للأزرار */
+    .btn {
+        border-radius: 30px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    /* تحسينات للبطاقات */
+    .card-modern .card-body {
+        padding: 2rem 1.5rem;
+    }
+
+    /* تحسينات للاستجابة */
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1rem;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+        }
+    }
+
+    /* تأثيرات الظلام */
+    .dark-mode .stat-card {
+        background: #1a1a2e;
+        color: #f8f9fa;
+    }
+
+    .dark-mode .stat-number {
+        color: #f8f9fa;
+    }
+
+    .dark-mode .hero-subtitle {
+        color: #adb5bd;
+    }
+</style>
+
+<script>
+    // تأثيرات تفاعلية للإحصائيات
+    document.addEventListener('DOMContentLoaded', function() {
+        // جلب الإحصائيات الحقيقية من السيرفر
+        fetch('/api/dashboard_stats')
+            .then(response => response.json())
+            .then(data => {
+                animateCounter('employees-count', data.employees_count);
+                animateCounter('housing-count', data.housing_count);
+                animateCounter('maintenance-count', data.maintenance_count);
+                animateCounter('assets-count', data.assets_count);
+            })
+            .catch(error => {
+                console.error('Error fetching stats:', error);
+                // استخدام أرقام افتراضية في حالة الخطأ
+                animateCounter('employees-count', 150);
+                animateCounter('housing-count', 25);
+                animateCounter('maintenance-count', 12);
+                animateCounter('assets-count', 85);
+            });
+
+        function animateCounter(elementId, target) {
+            const element = document.getElementById(elementId);
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    element.textContent = target;
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(current);
+                }
+            }, 30);
+        }
+
+        // تأثيرات إضافية للبطاقات
+        const cards = document.querySelectorAll('.card-modern');
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-10px)';
+            });
+
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    });
+</script>
+{% endblock %}

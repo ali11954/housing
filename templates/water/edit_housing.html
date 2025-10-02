@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>تعديل السكن</h2>
+<form method="POST">
+    <input type="text" name="name" value="{{ unit.name }}" required>
+    <input type="date" name="migration_date" value="{{ unit.migration_date }}">
+    <button type="submit">حفظ</button>
+</form>
+{% endblock %}

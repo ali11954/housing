@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}إدارة فرق الصيانة{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>فرق الصيانة</h2>
+
+    <form method="POST" action="{{ url_for('main.maintenance_team_add') }}" class="mb-3">
+        <div class="input-group">
+            <input type="text" name="name" class="form-control" placeholder="اسم الفريق" required>
+            <button class="btn btn-primary" type="submit">إضافة فريق</button>
+        </div>
+    </form>
+
+    <ul class="list-group">
+        {% for team in teams %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ team.name }}
+            <a href="{{ url_for('main.maintenance_team_delete', team_id=team.id) }}" class="btn btn-danger btn-sm">حذف</a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
