@@ -20,7 +20,7 @@
     <!-- تجميع الحضور حسب الشركة -->
     {% set records_by_company = {} %}
     {% for rec in records %}
-       {% set company = rec.company or "غير موجود" %}
+        {% set company = rec.get('company', 'غير موجود') if rec else 'غير معروف' %}
 
         {% if company not in records_by_company %}
             {% set _ = records_by_company.update({company: []}) %}
@@ -29,61 +29,79 @@
     {% endfor %}
 
     <!-- خلاصة الموظفين حسب الشركة -->
-    {% set total_employees = 0 %}
     <h4 class="mb-3">ملخص الشركات وعدد الموظفين</h4>
     <table class="table table-bordered table-striped text-center">
-    <thead class="table-info">
-        <tr>
-            <th>الشركة</th>
-            <th>عدد الموظفين</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for company, recs in records_by_company.items() %}
+        <thead class="table-info">
             <tr>
-                <td>{{ company }}</td>
-                <td>{{ recs|length }}</td>
+                <th>الشركة</th>
+                <th>عدد الموظفين</th>
             </tr>
-        {% endfor %}
-        <tr class="table-primary">
-            <td><strong>الإجمالي الكلي</strong></td>
-            <td><strong>{{ records_by_company.values() | map('length') | sum }}</strong></td>
-        </tr>
-    </tbody>
-</table>
->
+        </thead>
+        <tbody>
+            {% for company, recs in records_by_company.items() %}
+                <tr>
+                    <td>{{ company }}</td>
+                    <td>{{ recs|length }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="2" class="text-muted">لا توجد بيانات</td>
+                </tr>
+            {% endfor %}
+            <tr class="table-primary">
+                <td><strong>الإجمالي الكلي</strong></td>
+                <td><strong>{{ records|length if records else 0 }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
 
     <!-- عرض الحضور لكل شركة -->
     {% for company, recs in records_by_company.items() %}
-        <h5 class="mt-4">{{ company }} ({{ recs|length }} موظف/موظفين)</h5>
-        <table class="table table-striped table-bordered table-hover text-center align-middle">
-            <thead class="table-primary">
-                <tr>
-                    <th>الكود</th>
-                    <th>الاسم</th>
-                    <th>القسم</th>
-                    <th>الوظيفة</th>
-                    <th>نوع الدوام</th>
-                                       <th>اسم السكن </th>
-                    <th>دخول</th>
-                    <th>خروج</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for rec in recs|sort(attribute='employee_code', reverse=true) %}
-                    <tr>
-                        <td>{{ rec.employee_code }}</td>
-                        <td>{{ rec.name }}</td>
-                        <td>{{ rec.department }}</td>
-                        <td>{{ rec.job_title }}</td>
-                        <td>{{ rec.work_type }}</td>
-                                               <td>{{ rec.company_housing_name }}</td>
-                        <td>{{ rec.check_in }}</td>
-                        <td>{{ rec.check_out }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">{{ company }} ({{ recs|length }} موظف/موظفين)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered table-hover text-center align-middle mb-0">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>الكود</th>
+                                <th>الاسم</th>
+                                <th>القسم</th>
+                                <th>الوظيفة</th>
+                                <th>نوع الدوام</th>
+                                <th>اسم السكن</th>
+                                <th>دخول</th>
+                                <th>خروج</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rec in recs|sort(attribute='employee_code') %}
+                                <tr>
+                                    <td>{{ rec.get('employee_code', '-') }}</td>
+                                    <td>{{ rec.get('name', '-') }}</td>
+                                    <td>{{ rec.get('department', '-') }}</td>
+                                    <td>{{ rec.get('job_title', '-') }}</td>
+                                    <td>{{ rec.get('work_type', '-') }}</td>
+                                    <td>{{ rec.get('company_housing_name', '-') }}</td>
+                                    <td>{{ rec.get('check_in', '-') }}</td>
+                                    <td>{{ rec.get('check_out', '-') }}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-muted">لا توجد سجلات</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center">
+            لا توجد بيانات لعرضها
+        </div>
     {% endfor %}
 
 </div>
