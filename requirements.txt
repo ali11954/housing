@@ -1,0 +1,11 @@
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+Flask-WTF==1.1.1
+Werkzeug==2.3.7
+fpdf==1.7.2
+arabic-reshaper==3.0.0
+python-bidi==0.4.2
+pandas==2.0.3
+openpyxl==3.1.2
+pdfkit==1.0.0
+gunicorn==21.2.0
