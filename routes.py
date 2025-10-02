@@ -2193,7 +2193,7 @@ def sync_from_local():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
 def fetch_fingerprint_data(date=None):
     """
     دالة لجلب بيانات البصمة - معدلة لتجنب تعارض الجلسات
@@ -2312,6 +2312,110 @@ def sync_fingerprint():
     db.session.commit()
     return jsonify({"status": "success", "added": added_count})
 
+@bp.route("/view")
+def view_fingerprint_attendance():
+    print("✅ تم استدعاء الدالة بنجاح")
+
+    date_str = request.args.get("date")
+    selected_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.today().date()
+
+    print(f"📅 التاريخ المحدد: {selected_date}")
+
+    try:
+        # جلب بيانات البصمة
+        fingerprint_records = fetch_fingerprint_data(selected_date)
+        print(f"📊 عدد سجلات البصمة: {len(fingerprint_records)}")
+
+        combined_records = []
+
+        # حذف البيانات القديمة
+        try:
+            deleted_count = FingerprintArchive.query.filter_by(date=selected_date).delete()
+            db.session.commit()
+            print(f"🗑️ تم حذف {deleted_count} سجل قديم")
+        except Exception as delete_error:
+            print(f"⚠️ لم يتم حذف السجلات القديمة: {delete_error}")
+            db.session.rollback()
+
+        # معالجة كل سجل
+        for rec in fingerprint_records:
+            try:
+                emp_code = str(rec["employee_code"]).strip()
+                print(f"🔍 معالجة الموظف: {emp_code}")
+
+                # البحث عن الموظف
+                emp_row = db.session.query(
+                    Employee.employee_code,
+                    Employee.name,
+                    Employee.job_title,
+                    Employee.department,
+                    Employee.work_type,
+                    Employee.company_name,
+                    HousingUnit.name.label("housing_name"),
+                    Room.room_number
+                ).outerjoin(
+                    BedAssignment, Employee.id == BedAssignment.employee_id
+                ).outerjoin(
+                    Bed, Bed.id == BedAssignment.bed_id
+                ).outerjoin(
+                    Room, Bed.room_id == Room.id
+                ).outerjoin(
+                    HousingUnit, Room.housing_unit_id == HousingUnit.id
+                ).filter(
+                    Employee.employee_code == emp_code
+                ).first()
+
+                print(f"✅ وجد الموظف: {emp_row.name if emp_row else 'غير موجود'}")
+
+                record_data = {
+                    "employee_code": emp_code,
+                    "name": emp_row.name if emp_row else "غير موجود",
+                    "company": emp_row.company_name if emp_row else "-",
+                    "job_title": emp_row.job_title if emp_row else "-",
+                    "department": emp_row.department if emp_row else "-",
+                    "company_housing_name": emp_row.housing_name if emp_row and emp_row.housing_name else "غير مرتبط بسكن",
+                    "room_number": emp_row.room_number if emp_row and emp_row.room_number else "-",
+                    "work_type": emp_row.work_type if emp_row else "-",
+                    "check_in": rec.get("check_in") or "-",
+                    "check_out": rec.get("check_out") or "-",
+                    "date": selected_date
+                }
+
+                print(f"📝 بيانات السجل: {record_data}")
+
+                # حفظ في الأرشيف
+                archive_entry = FingerprintArchive(**record_data)
+                db.session.add(archive_entry)
+                db.session.commit()
+
+                combined_records.append(record_data)
+                print(f"✅ تم إضافة {emp_code} إلى القائمة المعروضة")
+
+            except Exception as e:
+                print(f"❌ خطأ في معالجة السجل: {e}")
+                db.session.rollback()
+                continue
+
+        print(f"🎉 تم معالجة {len(combined_records)} سجل بنجاح")
+        print(f"📋 سيتم إرسال {len(combined_records)} سجل إلى القالب")
+
+        return render_template(
+            "housing/fingerprint_attendance.html",
+            records=combined_records,
+            selected_date=selected_date
+        )
+
+    except Exception as e:
+        print(f"💥 خطأ رئيسي: {e}")
+        import traceback
+        print(traceback.format_exc())
+        db.session.rollback()
+
+        return render_template(
+            "housing/fingerprint_attendance.html",
+            records=[],
+            selected_date=selected_date
+        ), 500
 
 #دالة سحب و تحديث بيانات الموظفين الساكنين مهم جدا
 # ======================== دالة لجلب بيانات البصمة ========================
@@ -2436,117 +2540,6 @@ def attendance_sql():
         selected_date=selected_date
     )
 
-
-@bp.route("/view")
-def view_fingerprint_attendance():
-    print("✅ تم استدعاء الدالة بنجاح")
-
-    date_str = request.args.get("date")
-    selected_date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.today().date()
-
-    print(f"📅 التاريخ المحدد: {selected_date}")
-
-    try:
-        # جلب بيانات البصمة
-        fingerprint_records = fetch_fingerprint_data(selected_date)
-        print(f"📊 عدد سجلات البصمة: {len(fingerprint_records)}")
-
-        combined_records = []
-
-        # استخدام جلسة منفصلة للحذف لتجنب التعارض
-        try:
-            deleted_count = FingerprintArchive.query.filter_by(date=selected_date).delete()
-            db.session.commit()
-            print(f"🗑️ تم حذف {deleted_count} سجل قديم")
-        except Exception as delete_error:
-            print(f"⚠️ لم يتم حذف السجلات القديمة: {delete_error}")
-            db.session.rollback()
-
-        # معالجة كل سجل بجلسة منفصلة
-        for rec in fingerprint_records:
-            try:
-                emp_code = str(rec["employee_code"]).strip()
-
-                # البحث عن الموظف باستخدام جلسة منفصلة
-                emp_row = None
-                try:
-                    emp_row = db.session.query(
-                        Employee.employee_code,
-                        Employee.name,
-                        Employee.job_title,
-                        Employee.department,
-                        Employee.work_type,
-                        Employee.company_name,
-                        HousingUnit.name.label("housing_name"),
-                        Room.room_number
-                    ).outerjoin(
-                        BedAssignment, Employee.id == BedAssignment.employee_id
-                    ).outerjoin(
-                        Bed, Bed.id == BedAssignment.bed_id
-                    ).outerjoin(
-                        Room, Bed.room_id == Room.id
-                    ).outerjoin(
-                        HousingUnit, Room.housing_unit_id == HousingUnit.id
-                    ).filter(
-                        Employee.employee_code == emp_code
-                    ).first()
-                except Exception as query_error:
-                    print(f"⚠️ خطأ في استعلام الموظف {emp_code}: {query_error}")
-                    continue
-
-                record_data = {
-                    "employee_code": emp_code,
-                    "name": emp_row.name if emp_row else "غير موجود",
-                    "company": emp_row.company_name if emp_row else "-",
-                    "job_title": emp_row.job_title if emp_row else "-",
-                    "department": emp_row.department if emp_row else "-",
-                    "company_housing_name": emp_row.housing_name if emp_row and emp_row.housing_name else "غير مرتبط بسكن",
-                    "room_number": emp_row.room_number if emp_row and emp_row.room_number else "-",
-                    "work_type": emp_row.work_type if emp_row else "-",
-                    "check_in": rec.get("check_in") or "-",
-                    "check_out": rec.get("check_out") or "-",
-                    "date": selected_date
-                }
-
-                # حفظ في الأرشيف بجلسة سريعة
-                try:
-                    archive_entry = FingerprintArchive(**record_data)
-                    db.session.add(archive_entry)
-                    # حفظ فوري لكل سجل لتجنب التعارض
-                    db.session.commit()
-                except Exception as save_error:
-                    print(f"⚠️ خطأ في حفظ سجل {emp_code}: {save_error}")
-                    db.session.rollback()
-                    continue
-
-                combined_records.append(record_data)
-                print(f"✅ تم معالجة الموظف {emp_code}")
-
-            except Exception as e:
-                print(f"❌ خطأ في معالجة السجل {rec}: {e}")
-                db.session.rollback()
-                continue
-
-        print(f"🎉 تم معالجة {len(combined_records)} سجل بنجاح")
-
-        return render_template(
-            "housing/fingerprint_attendance.html",
-            records=combined_records,
-            selected_date=selected_date
-        )
-
-    except Exception as e:
-        print(f"💥 خطأ رئيسي: {e}")
-        import traceback
-        print(traceback.format_exc())
-        db.session.rollback()
-
-        # في حالة الخطأ، نعرض صفحة بدون بيانات بدلاً من بيانات تجريبية
-        return render_template(
-            "housing/fingerprint_attendance.html",
-            records=[],  # قائمة فارغة
-            selected_date=selected_date
-        ), 500
 
 def get_employee_from_new_db(emp_code):
     return db.session.query(Employee).options(
