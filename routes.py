@@ -14,7 +14,6 @@ from sqlalchemy.orm import joinedload
 from datetime import datetime, date, timedelta
 from collections import defaultdict, Counter
 import io
-import pandas as pd
 from fpdf import FPDF
 import arabic_reshaper
 from bidi.algorithm import get_display
@@ -25,7 +24,13 @@ bp = Blueprint('main', __name__)
 from flask import render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 from models import User
+from openpyxl import load_workbook
 
+try:
+    import pandas as pd
+except ImportError:
+    print("⚠️  pandas غير مثبتة - استخدام بدائل")
+    # أضف كود بديل هنا
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -2126,7 +2131,6 @@ def housing_report_advanced_excel():
     return export_hou_emp_excel_for_flat(data)  # دالة مبسطة للتصدير الموضح أدناه
 
 def export_hou_emp_excel_for_flat(housings):
-    import pandas as pd, io
     from flask import send_file
 
     rows = []
@@ -2706,7 +2710,6 @@ def update_fingerprint():
 def compare_pdf_with_fingerprint():
     from datetime import datetime
     import pdfplumber
-    import pandas as pd
     import re
 
     # 🔹 دالة لتوحيد الأكواد
@@ -3506,7 +3509,6 @@ def report_rooms_assets():
             unlinked_assets_count=0,
             totals=0
         )
-import pandas as pd
 from flask import Response
 
 # ======================
@@ -4784,7 +4786,6 @@ from flask import make_response
 from fpdf import FPDF
 from flask import make_response, send_file
 from fpdf import FPDF
-import pandas as pd
 from io import BytesIO
 
 @bp.route('/export_consumption_pdf')
