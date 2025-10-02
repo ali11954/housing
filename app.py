@@ -3,8 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 import os
 
+from models import db  # بدلاً من إنشاء db هنا
 # إنشاء instances
-db = SQLAlchemy()
 login_manager = LoginManager()
 
 def create_app():

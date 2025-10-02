@@ -5,7 +5,7 @@ from sqlalchemy import Enum
 from flask_login import UserMixin
 
 # استيراد db من حزمة app
-from app import db
+db = SQLAlchemy()
 
 # نموذج المستخدم
 # في models.py - تأكد من هذا الكود

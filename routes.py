@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for, flash, send_file, make_response
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
-from app import db
 from models import (
     HousingUnit, Room, Bed, Employee, Company, BedAssignment, User,
     Asset, AssetLink, AssetAction, AssetDisposal, AttendanceRecord,
@@ -25,7 +24,6 @@ from calendar import month_name
 bp = Blueprint('main', __name__)
 from flask import render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
-from app import db
 from models import User
 
 
@@ -122,13 +120,8 @@ def force_logout():
     flash('تم تسجيل الخروج القسري', 'info')
     return response
 
-# إضافة routes لإدارة المستخدمين (للمسؤول فقط)
-from flask import render_template, request, redirect, url_for, flash, jsonify
-from flask_login import login_required, current_user
-from werkzeug.security import generate_password_hash
 from models import User
 
-from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 import json
 
@@ -670,27 +663,9 @@ def bed_delete(bed_id):
 # --- تخصيص الأسرة ---
 
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from datetime import datetime, date
-from sqlalchemy.orm import joinedload
-from sqlalchemy import or_
 from models import db, Employee, Bed, Room, HousingUnit, BedAssignment, BedTransfer, Company
 
 
-from flask import request, jsonify, render_template
-from app import db
-from models import Employee, Company
-from flask import request, jsonify, render_template
-from app import db
-from models import Employee, Company, Bed, BedAssignment
-from datetime import datetime
-
-from collections import defaultdict
-from flask import render_template
-from models import Employee, BedAssignment, Bed, Room, HousingUnit
-from app import db
-from sqlalchemy.orm import joinedload
-from collections import defaultdict
 
 def get_latest_bed_info(employee):
     """إرجاع آخر تخصيص للسرير للموظف"""
@@ -1724,32 +1699,8 @@ def build_filter_args():
         "employee_name": request.args.get("employee_name", "").strip(),
     }
 
-from models import  Company
 
 from collections import defaultdict
-
-
-
-
-
-from collections import defaultdict
-from flask import render_template
-from models import Employee
-from app import db
-
-from sqlalchemy import func
-
-from flask import render_template
-from collections import defaultdict
-from sqlalchemy import func
-from models import Employee, Bed, BedAssignment
-from app import db
-
-from collections import defaultdict
-from flask import render_template
-from sqlalchemy import func
-from collections import defaultdict
-from sqlalchemy.orm import joinedload
 
 @bp.route("/housing_dashboard")
 def housing_dashboard():
@@ -2429,13 +2380,6 @@ def attendance_sql():
         selected_date=selected_date
     )
 
-import sqlite3
-from flask import render_template, request
-from datetime import datetime
-
-import sqlite3
-from flask import render_template, request
-from datetime import datetime
 
 @bp.route("/view")
 def view_fingerprint_attendance():
@@ -2504,15 +2448,6 @@ def view_fingerprint_attendance():
         selected_date=selected_date
     )
 
-import sqlite3
-from flask import render_template, request
-from models import FingerprintArchive
-from flask import render_template, request
-from models import FingerprintArchive, db
-from datetime import datetime, timedelta
-
-from datetime import datetime, timedelta
-from models import db, Employee, FingerprintArchive
 def get_employee_from_new_db(emp_code):
     return db.session.query(Employee).options(
         joinedload(Employee.company),
@@ -3943,8 +3878,6 @@ def assets_history():
 def evaluation_dashboard():
     return redirect("http://192.168.6.61:8000/login")
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from models import db, MaintenanceRequest
 
 
 # الصفحة الرئيسية للـ Blueprint → توجه مباشرة لنموذج الطلب الجديد
@@ -3960,10 +3893,7 @@ def maintenance_dashboard():
 
 
 # إضافة طلب جديد
-from flask import request, redirect, url_for, flash, render_template
-from datetime import datetime, date
 
-from datetime import datetime
 from models import db, MaintenanceRequest, HousingUnit, Room, MaintenanceTeam
 @bp.route("/maintenance/new", methods=["GET", "POST"])
 def new_request():
@@ -4100,7 +4030,6 @@ def maintenance_team_add():
     return redirect(url_for("main.maintenance_teams"))
 
 
-from flask import render_template
 from models import Assetwarehouse, Consumable, CleaningMaterial  # تأكد أن هذه النماذج موجودة
 
 @bp.route("/warehouse_dashboard")
@@ -4113,12 +4042,6 @@ def warehouse_dashboard():
                            consumables=consumables,
                            cleaning=cleaning)
 
-
-from models import MonthlyConsumption, DailyResident
-
-from flask import render_template
-from sqlalchemy import func
-from datetime import datetime, date
 
 
 @bp.route("/water_dashboard")
@@ -4191,7 +4114,6 @@ def water_dashboard():
         expense_chart_values=expense_chart_values,
         now=datetime.now()  # ✅ إضافة المتغير now
     )
-from flask import Flask
 
 
 # فلتر لإضافة فواصل الآلاف
@@ -4211,11 +4133,6 @@ def currency_format(value):
     except (ValueError, TypeError):
         return value
 
-from flask import Blueprint, jsonify
-from datetime import datetime, timedelta, date
-from flask import request, render_template
-from datetime import datetime, timedelta
-from models import HousingUnit, FingerprintArchive
 
 
 @bp.route('/daily-resident', methods=['GET'])
@@ -4353,14 +4270,6 @@ def daily_resident_view():
         grand_total=grand_total,
         grand_average=grand_average
     )
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from app import db
-from models import ExpenseItem
-# عرض وإدارة البنود
-
-
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from models import db, ExpenseItem, HousingUnit, MonthlyConsumption
 
 
 @bp.route("/expenses")
@@ -4514,12 +4423,6 @@ def get_total_residents(housing_identifier, month_input, allowed_housings_item=N
         db.session.commit()
 
 
-from flask import request, render_template, flash, redirect
-from sqlalchemy.orm import joinedload
-from models import db, HousingUnit, ExpenseItem, MonthlyConsumption
-from datetime import datetime
-
-
 from flask import request, render_template, flash, redirect, url_for
 from sqlalchemy.orm import joinedload
 from models import db, HousingUnit, ExpenseItem, MonthlyConsumption
@@ -4620,10 +4523,6 @@ def monthly_consumption():
     )
 
 
-from collections import namedtuple
-from flask import request, render_template
-from datetime import datetime
-from sqlalchemy import func
 from models import db, HousingUnit, ExpenseItem, MonthlyConsumption
 
 # ===========================
