@@ -11,7 +11,7 @@ fpdf2==2.7.8
 arabic-reshaper==3.0.0
 python-bidi==0.4.2
 pdfkit==1.0.0
-weasyprint==61.3
+weasyprint==66.0
 xlrd==2.0.1
 XlsxWriter==3.1.9
 reportlab==4.0.7
