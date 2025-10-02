@@ -25,11 +25,7 @@ from flask import render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 from models import User
 from openpyxl import load_workbook
-
-try:
-    import pandas as pd
-except ImportError:
-    print("⚠️  pandas غير مثبتة - استخدام بدائل")
+import pandas as pd
     # أضف كود بديل هنا
 
 @bp.route('/login', methods=['GET', 'POST'])
