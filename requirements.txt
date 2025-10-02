@@ -1,12 +1,12 @@
-echo Flask==2.3.3 > requirements.txt
-echo Flask-SQLAlchemy==3.0.5 >> requirements.txt
-echo Flask-Login==0.6.3 >> requirements.txt
-echo Flask-WTF==1.1.1 >> requirements.txt
-echo Werkzeug==2.3.7 >> requirements.txt
-echo gunicorn==21.2.0 >> requirements.txt
-echo python-dotenv==1.0.0 >> requirements.txt
-echo pandas==2.2.2 >> requirements.txt
-echo openpyxl==3.1.2 >> requirements.txt
-echo fpdf==1.7.2 >> requirements.txt
-echo arabic-reshaper==3.0.0 >> requirements.txt
-echo python-bidi==0.4.2 >> requirements.txt
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+Flask-Login==0.6.3
+Flask-WTF==1.1.1
+Werkzeug==2.3.7
+gunicorn==21.2.0
+python-dotenv==1.0.0
+pandas==2.2.2
+openpyxl==3.1.2
+fpdf==1.7.2
+arabic-reshaper==3.0.0
+python-bidi==0.4.2
