@@ -3967,7 +3967,7 @@ def assets_history():
 # داخل routes.py
 @bp.route('/evaluation_dashboard')
 def evaluation_dashboard():
-    return redirect("http://192.168.6.61:8000/login")
+    return redirect("https://workplace-cleanliness-environment-app.onrender.com/dashboard")
 
 
 
