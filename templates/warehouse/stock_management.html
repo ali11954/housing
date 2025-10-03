@@ -1,0 +1,640 @@
+<!-- templates/warehouse/stock_management.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- رأس الصفحة -->
+    <div class="row">
+        <div class="col-12">
+            <div class="page-header d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex align-items-center">
+                    <div class="header-icon me-3">
+                        <i class="fas fa-boxes fa-2x text-primary"></i>
+                    </div>
+                    <div>
+                        <h1 class="h3 mb-0">إدارة المخزون والإضافات</h1>
+                        <p class="text-muted mb-0">إضافة وتعديل المخزون للمواد</p>
+                    </div>
+                </div>
+                <div>
+                    <a href="{{ url_for('main.materials_management') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-right me-2"></i> العودة لإدارة المواد
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- بطاقات الإحصائيات -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card stat-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ materials|length }}</h4>
+                            <p class="mb-0">إجمالي المواد</p>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-box fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card stat-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ total_stock_value }}</h4>
+                            <p class="mb-0">إجمالي المخزون</p>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-cubes fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card stat-card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ low_stock_count }}</h4>
+                            <p class="mb-0">مواد تحت الحد الأدنى</p>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card stat-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">{{ recent_additions_count }}</h4>
+                            <p class="mb-0">إضافة خلال أسبوع</p>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-plus-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- البحث والتصفية -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body py-3">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-search text-muted"></i>
+                                </span>
+                                <input type="text" id="searchInput" class="form-control border-start-0" placeholder="ابحث عن مادة...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="stockStatusFilter" class="form-select">
+                                <option value="">جميع الحالات</option>
+                                <option value="low">تحت الحد الأدنى</option>
+                                <option value="good">مخزون جيد</option>
+                                <option value="out">نفذ من المخزون</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="typeFilter" class="form-select">
+                                <option value="">جميع الأنواع</option>
+                                {% for type in material_types %}
+                                <option value="{{ type.name }}">{{ type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button id="resetFilters" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-redo me-1"></i> إعادة تعيين
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول المواد -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 d-flex align-items-center">
+                        <i class="fas fa-list me-2"></i> قائمة المواد
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="materialsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="50">#</th>
+                                    <th>اسم المادة</th>
+                                    <th>النوع</th>
+                                    <th>الوحدة</th>
+                                    <th>الرصيد الحالي</th>
+                                    <th>الحد الأدنى</th>
+                                    <th>الحالة</th>
+                                    <th width="200">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for material in materials %}
+                                <tr data-type="{{ material.type.name }}" data-status="{{ 'out' if material.current_balance == 0 else 'low' if material.current_balance <= material.min_stock_level else 'good' }}">
+                                    <td class="text-muted">{{ loop.index }}</td>
+                                    <td class="fw-bold">{{ material.name }}</td>
+                                    <td>
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: {{ material.type.color }}; color: white;">
+                                            <i class="fas fa-tag me-1"></i> {{ material.type.name }}
+                                        </span>
+                                    </td>
+                                    <td>{{ material.unit }}</td>
+                                    <td>
+                                        <span class="{{ 'text-danger fw-bold' if material.current_balance <= material.min_stock_level else 'text-success' }}">
+                                            {{ material.current_balance }}
+                                        </span>
+                                    </td>
+                                    <td>{{ material.min_stock_level }}</td>
+                                    <td>
+                                        {% if material.current_balance == 0 %}
+                                            <span class="badge bg-danger rounded-pill px-3 py-2">
+                                                <i class="fas fa-times-circle me-1"></i> نفذ
+                                            </span>
+                                        {% elif material.current_balance <= material.min_stock_level %}
+                                            <span class="badge bg-warning rounded-pill px-3 py-2">
+                                                <i class="fas fa-exclamation-circle me-1"></i> منخفض
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-success rounded-pill px-3 py-2">
+                                                <i class="fas fa-check-circle me-1"></i> جيد
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <!-- زر إضافة مخزون -->
+                                            <button class="btn btn-success"
+                                                    onclick="addStock({{ material.id }}, '{{ material.name | replace("'", "&#39;") }}', '{{ material.unit }}')"
+                                                    title="إضافة مخزون">
+                                                <i class="fas fa-plus"></i> إضافة
+                                            </button>
+
+                                            <!-- زر تعديل المخزون -->
+                                            <button class="btn btn-info"
+                                                    onclick="adjustStock({{ material.id }}, '{{ material.name | replace("'", "&#39;") }}', '{{ material.unit }}', {{ material.current_balance }})"
+                                                    title="تعديل المخزون">
+                                                <i class="fas fa-edit"></i> تعديل
+                                            </button>
+
+                                            <!-- زر التفاصيل -->
+                                            <button class="btn btn-outline-primary"
+                                                    onclick="showMaterialDetails({{ material.id }})"
+                                                    title="عرض التفاصيل">
+                                                <i class="fas fa-info"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-5">
+                                        <i class="fas fa-box-open fa-3x mb-3 d-block"></i>
+                                        <p class="mb-0">لا توجد مواد مضافة</p>
+                                        <small class="text-muted">انتقل إلى إدارة المواد لإضافة مواد جديدة</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- سجل الإضافات الحديثة -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light py-3">
+                    <h5 class="card-title mb-0 d-flex align-items-center">
+                        <i class="fas fa-history me-2"></i> آخر الإضافات
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>التاريخ</th>
+                                    <th>المادة</th>
+                                    <th>الكمية</th>
+                                    <th>ملاحظات</th>
+                                    <th>تمت بواسطة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for addition in recent_additions %}
+                                <tr>
+                                    <td>{{ addition.added_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td class="fw-bold">{{ addition.material.name }}</td>
+                                    <td>
+                                        <span class="badge bg-success">+{{ addition.quantity }} {{ addition.material.unit }}</span>
+                                    </td>
+                                    <td class="text-muted">
+                                        {% if addition.notes %}
+                                            {{ addition.notes[:30] }}{% if addition.notes|length > 30 %}...{% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ addition.added_by }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-3">
+                                        لا توجد إضافات حديثة
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نموذج إضافة مخزون -->
+<div class="modal fade" id="addStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-plus me-2"></i> إضافة مخزون</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addStockForm" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">المادة:</label>
+                        <div id="addStockMaterialInfo" class="form-control bg-light" readonly>
+                            جاري التحميل...
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="add_quantity" class="form-label">الكمية المضافة <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control" id="add_quantity" name="quantity" required>
+                        <div class="form-text">أدخل الكمية المراد إضافتها للمخزون</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="add_notes" class="form-label">ملاحظات (اختياري)</label>
+                        <textarea class="form-control" id="add_notes" name="notes" rows="2" placeholder="ملاحظات حول الإضافة..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-plus me-1"></i> إضافة للمخزون
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- نموذج تعديل المخزون -->
+<div class="modal fade" id="adjustStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-sliders-h me-2"></i> تعديل المخزون</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="adjustStockForm" method="POST">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>تنبيه:</strong> هذا التعديل سيغير الرصيد الحالي مباشرة
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">المادة:</label>
+                        <div id="adjustStockMaterialInfo" class="form-control bg-light" readonly>
+                            جاري التحميل...
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="new_balance" class="form-label">الرصيد الجديد <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control" id="new_balance" name="new_balance" required>
+                        <div class="form-text">الرصيد الحالي: <span id="current_balance_display">0</span></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="adjust_reason" class="form-label">سبب التعديل <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="adjust_reason" name="reason" rows="3"
+                                  placeholder="يرجى كتابة سبب تعديل المخزون..." required></textarea>
+                        <div class="form-text">مطلوب لتسجيل سبب التعديل في السجلات</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-save me-1"></i> حفظ التعديل
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- نموذج تفاصيل المادة -->
+<div class="modal fade" id="materialDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i> تفاصيل المادة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="materialDetailsContent">
+                    جاري تحميل التفاصيل...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header {
+    border-bottom: 1px solid #eaeaea;
+    padding-bottom: 1rem;
+}
+
+.stat-card {
+    border-radius: 10px;
+    transition: transform 0.3s ease;
+    border: none;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-icon {
+    opacity: 0.8;
+}
+
+.card {
+    border-radius: 10px;
+    border: none;
+}
+
+.table th {
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.btn-group-sm > .btn {
+    border-radius: 5px;
+    margin: 0 2px;
+}
+</style>
+
+<script>
+// دالة إضافة مخزون
+function addStock(materialId, materialName, materialUnit) {
+    document.getElementById('addStockMaterialInfo').innerHTML =
+        `<strong>${materialName}</strong> - الوحدة: ${materialUnit}`;
+
+    const form = document.getElementById('addStockForm');
+    form.action = `/add_stock/${materialId}`;
+
+    // مسح الحقول
+    document.getElementById('add_quantity').value = '';
+    document.getElementById('add_notes').value = '';
+
+    const modal = new bootstrap.Modal(document.getElementById('addStockModal'));
+    modal.show();
+}
+
+// دالة تعديل المخزون
+function adjustStock(materialId, materialName, materialUnit, currentBalance) {
+    document.getElementById('adjustStockMaterialInfo').innerHTML =
+        `<strong>${materialName}</strong> - الوحدة: ${materialUnit}`;
+
+    document.getElementById('current_balance_display').textContent =
+        `${currentBalance} ${materialUnit}`;
+
+    document.getElementById('new_balance').value = currentBalance;
+
+    const form = document.getElementById('adjustStockForm');
+    form.action = `/adjust_stock/${materialId}`;
+
+    // مسح حقل السبب
+    document.getElementById('adjust_reason').value = '';
+
+    const modal = new bootstrap.Modal(document.getElementById('adjustStockModal'));
+    modal.show();
+}
+
+// دالة عرض تفاصيل المادة
+function showMaterialDetails(materialId) {
+    fetch(`/get_material_details/${materialId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const material = data.material;
+                let detailsHtml = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>المعلومات الأساسية</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>اسم المادة:</strong></td>
+                                    <td>${material.name}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>النوع:</strong></td>
+                                    <td><span class="badge" style="background-color: ${material.type_color}">${material.type_name}</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>الوحدة:</strong></td>
+                                    <td>${material.unit}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>تاريخ الإضافة:</strong></td>
+                                    <td>${material.created_at}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>المخزون</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>الرصيد الابتدائي:</strong></td>
+                                    <td>${material.initial_balance} ${material.unit}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>الرصيد الحالي:</strong></td>
+                                    <td class="${material.current_balance <= material.min_stock_level ? 'text-danger fw-bold' : 'text-success'}">
+                                        ${material.current_balance} ${material.unit}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>الحد الأدنى:</strong></td>
+                                    <td>${material.min_stock_level} ${material.unit}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>الحالة:</strong></td>
+                                    <td>
+                                        ${material.current_balance == 0 ?
+                                            '<span class="badge bg-danger">نفذ من المخزون</span>' :
+                                            material.current_balance <= material.min_stock_level ?
+                                            '<span class="badge bg-warning">منخفض</span>' :
+                                            '<span class="badge bg-success">جيد</span>'
+                                        }
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('materialDetailsContent').innerHTML = detailsHtml;
+                const modal = new bootstrap.Modal(document.getElementById('materialDetailsModal'));
+                modal.show();
+            } else {
+                alert('حدث خطأ في تحميل التفاصيل');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('حدث خطأ في الاتصال بالخادم');
+        });
+}
+
+// البحث والتصفية
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const stockStatusFilter = document.getElementById('stockStatusFilter');
+    const typeFilter = document.getElementById('typeFilter');
+    const resetFilters = document.getElementById('resetFilters');
+
+    function filterMaterials() {
+        const searchText = searchInput.value.toLowerCase();
+        const statusFilter = stockStatusFilter.value;
+        const typeFilterValue = typeFilter.value;
+
+        const rows = document.querySelectorAll('#materialsTable tbody tr');
+
+        rows.forEach(row => {
+            const materialName = row.cells[1].textContent.toLowerCase();
+            const materialType = row.getAttribute('data-type');
+            const materialStatus = row.getAttribute('data-status');
+
+            const matchesSearch = materialName.includes(searchText);
+            const matchesStatus = !statusFilter || materialStatus === statusFilter;
+            const matchesType = !typeFilterValue || materialType === typeFilterValue;
+
+            row.style.display = (matchesSearch && matchesStatus && matchesType) ? '' : 'none';
+        });
+    }
+
+    if (searchInput) searchInput.addEventListener('input', filterMaterials);
+    if (stockStatusFilter) stockStatusFilter.addEventListener('change', filterMaterials);
+    if (typeFilter) typeFilter.addEventListener('change', filterMaterials);
+    if (resetFilters) {
+        resetFilters.addEventListener('click', function() {
+            searchInput.value = '';
+            stockStatusFilter.value = '';
+            typeFilter.value = '';
+            filterMaterials();
+        });
+    }
+
+    // التحقق من صحة النماذج
+    const addStockForm = document.getElementById('addStockForm');
+    if (addStockForm) {
+        addStockForm.addEventListener('submit', function(e) {
+            const quantity = parseFloat(document.getElementById('add_quantity').value);
+
+            if (!quantity || quantity <= 0) {
+                e.preventDefault();
+                alert('يرجى إدخال كمية صحيحة أكبر من الصفر');
+                return;
+            }
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الإضافة...';
+            }
+        });
+    }
+
+    const adjustStockForm = document.getElementById('adjustStockForm');
+    if (adjustStockForm) {
+        adjustStockForm.addEventListener('submit', function(e) {
+            const newBalance = parseFloat(document.getElementById('new_balance').value);
+            const reason = document.getElementById('adjust_reason').value.trim();
+
+            if (newBalance < 0) {
+                e.preventDefault();
+                alert('لا يمكن أن يكون المخزون سالباً');
+                return;
+            }
+
+            if (!reason) {
+                e.preventDefault();
+                alert('يرجى كتابة سبب التعديل');
+                return;
+            }
+
+            if (!confirm('هل أنت متأكد من تعديل المخزون؟ سيتم تغيير الرصيد الحالي مباشرة.')) {
+                e.preventDefault();
+                return;
+            }
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري التعديل...';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">تقرير المخزون</h1>
+                <button class="btn btn-primary" onclick="window.print()">طباعة التقرير</button>
+            </div>
+
+            <!-- بطاقات الإحصائيات -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">إجمالي الرصيد الابتدائي</h5>
+                            <h3>{{ total_initial }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">إجمالي الرصيد الحالي</h5>
+                            <h3>{{ total_current }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">إجمالي المصروف</h5>
+                            <h3>{{ total_disbursed }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">مواد منخفضة الرصيد</h5>
+                            <h3>{{ low_stock|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- جدول المواد -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">كشف المواد</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>اسم المادة</th>
+                                    <th>الوحدة</th>
+                                    <th>الرصيد الابتدائي</th>
+                                    <th>الرصيد الحالي</th>
+                                    <th>المصروف</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for material in materials %}
+                                <tr>
+                                    <td>{{ material.name }}</td>
+                                    <td>{{ material.unit }}</td>
+                                    <td>{{ material.initial_balance }}</td>
+                                    <td>{{ material.current_balance }}</td>
+                                    <td>{{ material.initial_balance - material.current_balance }}</td>
+                                    <td>
+                                        {% if material.current_balance <= material.min_stock_level %}
+                                        <span class="badge bg-danger">منخفض</span>
+                                        {% else %}
+                                        <span class="badge bg-success">جيد</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

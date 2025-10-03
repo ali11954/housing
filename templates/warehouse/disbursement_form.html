@@ -1,0 +1,404 @@
+<!-- templates/warehouse/disbursement_form.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">نظام صرف المواد</h1>
+                <div>
+                    <a href="{{ url_for('main.warehouse_dashboard') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right"></i> العودة للمستودع
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- نموذج الصرف -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0"><i class="fas fa-hand-holding-usd"></i> نموذج صرف المواد</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('main.disbursement_form') }}" id="disbursementForm">
+                        <!-- معلومات الموظف -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">بيانات الموظف</h6>
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label for="employee_code" class="form-label">كود الموظف</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="employee_code"
+                                               name="employee_code" placeholder="أدخل كود الموظف ثم اضغط Enter"
+                                               onkeypress="handleEmployeeCodeEnter(event)">
+                                        <button type="button" class="btn btn-primary" onclick="searchEmployee()">
+                                            <i class="fas fa-search"></i> بحث
+                                        </button>
+                                    </div>
+                                    <div class="form-text">اضغط Enter للبحث التلقائي</div>
+                                </div>
+                            </div>
+
+                            <!-- معلومات الموظف -->
+                            <div id="employee_info" class="mt-3" style="display: none;">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white py-2">
+                                        <i class="fas fa-user"></i> بيانات الموظف
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <strong>الاسم:</strong> <span id="emp_name">-</span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <strong>الوظيفة:</strong> <span id="emp_job">-</span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <strong>القسم:</strong> <span id="emp_dept">-</span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <strong>نوع الخدمة:</strong> <span id="emp_service">-</span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <strong>اسم السكن:</strong> <span id="emp_housing">-</span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <strong>رقم الغرفة:</strong> <span id="emp_room">-</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- معلومات الصرف -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">بيانات الصرف</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="disb_material" class="form-label">المادة</label>
+                                    <select class="form-select" id="disb_material" name="material_id" required>
+                                        <option value="">اختر المادة</option>
+                                        {% for material in materials %}
+                                        <option value="{{ material.id }}" data-balance="{{ material.current_balance }}">
+                                            {{ material.name }} (المتبقي: {{ material.current_balance }} {{ material.unit }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="disb_quantity" class="form-label">الكمية</label>
+                                    <input type="number" step="0.01" class="form-control" id="disb_quantity"
+                                           name="quantity" required placeholder="أدخل الكمية">
+                                    <div class="form-text">الحد الأقصى: <span id="max_quantity">0</span></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="disb_recipient" class="form-label">المستلم</label>
+                                    <input type="text" class="form-control" id="disb_recipient"
+                                           name="recipient" required readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="disb_department" class="form-label">القسم</label>
+                                    <input type="text" class="form-control" id="disb_department"
+                                           name="department" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="disb_date" class="form-label">تاريخ الصرف</label>
+                                    <input type="date" class="form-control" id="disb_date"
+                                           name="date" value="{{ today }}" required>
+                                </div>
+                                <div class="col-12">
+                                    <label for="disb_notes" class="form-label">ملاحظات الصرف</label>
+                                    <textarea class="form-control" id="disb_notes" name="notes"
+                                              rows="3" placeholder="ملاحظات إضافية حول الصرف..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- زر الصرف -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check-circle"></i> تأكيد الصرف
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- معلومات إضافية -->
+        <div class="col-lg-6">
+            <!-- المواد المتاحة -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0"><i class="fas fa-boxes"></i> المواد المتاحة</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>المادة</th>
+                                    <th>الرصيد</th>
+                                    <th>الوحدة</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for material in materials %}
+                                <tr>
+                                    <td>{{ material.name }}</td>
+                                    <td>
+                                        <span class="{{ 'text-danger' if material.current_balance <= material.min_stock_level else 'text-success' }}">
+                                            {{ material.current_balance }}
+                                        </span>
+                                    </td>
+                                    <td>{{ material.unit }}</td>
+                                    <td>
+                                        {% if material.current_balance <= material.min_stock_level %}
+                                            <span class="badge bg-danger">منخفض</span>
+                                        {% else %}
+                                            <span class="badge bg-success">متوفر</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- آخر عمليات الصرف -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0"><i class="fas fa-history"></i> آخر عمليات الصرف</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>التاريخ</th>
+                                    <th>المادة</th>
+                                    <th>الكمية</th>
+                                    <th>المستلم</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for disbursement in recent_disbursements %}
+                                <tr>
+                                    <td>{{ disbursement.disbursement_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ disbursement.material.name }}</td>
+                                    <td>{{ disbursement.quantity }}</td>
+                                    <td>{{ disbursement.recipient }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- رسائل التنبيه -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show position-fixed"
+                 style="top: 20px; right: 20px; z-index: 9999;">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+.form-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+</style>
+
+<script>
+// دالة للبحث عن الموظف عند الضغط على Enter
+function handleEmployeeCodeEnter(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        searchEmployee();
+    }
+}
+
+// دالة للبحث عن الموظف
+function searchEmployee() {
+    const employeeCode = document.getElementById('employee_code').value;
+    if (!employeeCode) {
+        showAlert('يرجى إدخال كود الموظف', 'warning');
+        return;
+    }
+
+    // إظهار تحميل
+    const employeeInfo = document.getElementById('employee_info');
+    employeeInfo.style.display = 'block';
+    document.getElementById('emp_name').textContent = 'جاري البحث...';
+    document.getElementById('emp_job').textContent = '-';
+    document.getElementById('emp_dept').textContent = '-';
+    document.getElementById('emp_service').textContent = '-';
+    document.getElementById('emp_housing').textContent = '-';
+    document.getElementById('emp_room').textContent = '-';
+
+    fetch(`/get_employee_by_code/${employeeCode}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const emp = data.employee;
+                document.getElementById('emp_name').textContent = emp.name;
+                document.getElementById('emp_job').textContent = emp.job_title || '-';
+                document.getElementById('emp_dept').textContent = emp.department || '-';
+                document.getElementById('emp_service').textContent = emp.service_type || '-';
+                document.getElementById('emp_housing').textContent = emp.company_housing_name || '-';
+                document.getElementById('emp_room').textContent = emp.room_number || '-';
+
+                // تعبئة الحقول تلقائياً
+                document.getElementById('disb_recipient').value = emp.name;
+                document.getElementById('disb_department').value = emp.department || '';
+
+                showAlert('تم العثور على الموظف بنجاح', 'success');
+            } else {
+                document.getElementById('emp_name').textContent = 'لم يتم العثور';
+                showAlert(data.message, 'warning');
+
+                // مسح الحقول إذا لم يتم العثور على الموظف
+                document.getElementById('disb_recipient').value = '';
+                document.getElementById('disb_department').value = '';
+            }
+        })
+        .catch(error => {
+            document.getElementById('emp_name').textContent = 'خطأ في الاتصال';
+            showAlert('حدث خطأ في الاتصال بالخادم', 'danger');
+        });
+}
+
+// تحديث الرصيد المتاح عند اختيار مادة
+document.getElementById('disb_material')?.addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const balance = selectedOption.getAttribute('data-balance');
+    if (balance) {
+        document.getElementById('disb_quantity').setAttribute('max', balance);
+        document.getElementById('max_quantity').textContent = balance;
+    }
+});
+
+// مسح معلومات الموظف عند تغيير الكود
+document.getElementById('employee_code')?.addEventListener('input', function() {
+    if (this.value === '') {
+        document.getElementById('employee_info').style.display = 'none';
+        document.getElementById('disb_recipient').value = '';
+        document.getElementById('disb_department').value = '';
+    }
+});
+
+// التحقق من النموذج قبل الإرسال
+document.getElementById('disbursementForm')?.addEventListener('submit', function(e) {
+    const quantity = document.getElementById('disb_quantity').value;
+    const maxQuantity = document.getElementById('disb_quantity').getAttribute('max');
+
+    if (parseFloat(quantity) > parseFloat(maxQuantity)) {
+        e.preventDefault();
+        showAlert('الكمية المطلوبة تتجاوز الرصيد المتاح', 'danger');
+        return false;
+    }
+
+    if (!document.getElementById('disb_recipient').value) {
+        e.preventDefault();
+        showAlert('يرجى البحث عن الموظف أولاً', 'warning');
+        return false;
+    }
+});
+
+// دالة لعرض الرسائل
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alertDiv);
+
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+// تهيئة الحد الأقصى للكمية عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    const materialSelect = document.getElementById('disb_material');
+    if (materialSelect.value) {
+        const selectedOption = materialSelect.options[materialSelect.selectedIndex];
+        const balance = selectedOption.getAttribute('data-balance');
+        if (balance) {
+            document.getElementById('disb_quantity').setAttribute('max', balance);
+            document.getElementById('max_quantity').textContent = balance;
+        }
+    }
+});
+
+    // في disbursement_form.html
+document.getElementById('disbursementForm')?.addEventListener('submit', function(e) {
+    // التحقق من الحقول المطلوبة
+    const materialSelect = document.getElementById('disb_material');
+    const quantity = document.getElementById('disb_quantity').value;
+    const recipient = document.getElementById('disb_recipient').value;
+    const date = document.getElementById('disb_date').value;
+
+    if (!materialSelect.value) {
+        e.preventDefault();
+        showAlert('يرجى اختيار المادة', 'warning');
+        return false;
+    }
+
+    if (!quantity || parseFloat(quantity) <= 0) {
+        e.preventDefault();
+        showAlert('يرجى إدخال كمية صحيحة', 'warning');
+        return false;
+    }
+
+    if (!recipient.trim()) {
+        e.preventDefault();
+        showAlert('يرجى إدخال اسم المستلم', 'warning');
+        return false;
+    }
+
+    // إظهار تحميل
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الصرف...';
+    submitBtn.disabled = true;
+
+    // إعادة تمكين الزر بعد 5 ثواني في حالة وجود خطأ
+    setTimeout(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }, 5000);
+
+    return true;
+});
+</script>
+{% endblock %}

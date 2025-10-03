@@ -614,3 +614,126 @@ class MonthlyResidentAverage(db.Model):
 
     housing_unit = db.relationship("HousingUnit")
 
+
+from datetime import datetime
+
+
+# نموذج أنواع المواد
+class MaterialType(db.Model):
+    __tablename__ = 'material_types'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    description = db.Column(db.String(200))
+    color = db.Column(db.String(7), default='#6c757d')  # لون لكل نوع
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # العلاقات
+    materials = db.relationship('Material', backref='type', lazy=True)
+
+    def __repr__(self):
+        return f'<MaterialType {self.name}>'
+
+
+# تحديث نموذج المواد
+class Material(db.Model):
+    __tablename__ = 'materials'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    unit = db.Column(db.String(20), nullable=False)
+    initial_balance = db.Column(db.Float, default=0)
+    current_balance = db.Column(db.Float, default=0)
+    min_stock_level = db.Column(db.Float, default=0)
+    material_type_id = db.Column(db.Integer, db.ForeignKey('material_types.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    disbursements = db.relationship('MaterialDisbursement', back_populates='material', lazy=True)
+
+    def __repr__(self):
+        return f'<Material {self.name}>'
+
+
+
+# نموذج صرف المواد
+class MaterialDisbursement(db.Model):
+    __tablename__ = 'material_disbursements'
+
+    id = db.Column(db.Integer, primary_key=True)
+    material_id = db.Column(db.Integer, db.ForeignKey('materials.id'), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    disbursement_date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+    recipient = db.Column(db.String(100), nullable=False)
+    department = db.Column(db.String(100))  # القسم المستلم
+    project = db.Column(db.String(100))  # المشروع
+    notes = db.Column(db.Text)
+    created_by = db.Column(db.String(100))  # اسم المستخدم الذي أجرى الصرف
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # إضافة حقول الإلغاء مباشرة في جدول الصرف
+    is_cancelled = db.Column(db.Boolean, default=False)
+    cancellation_reason = db.Column(db.Text)
+    cancelled_by = db.Column(db.String(100))
+    cancelled_at = db.Column(db.DateTime)
+
+    material = db.relationship('Material', back_populates='disbursements')
+
+    def __repr__(self):
+        return f'<MaterialDisbursement {self.material.name} - {self.quantity}>'
+
+
+# نموذج جرد المخزون
+class InventoryCount(db.Model):
+    __tablename__ = 'inventory_counts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    material_id = db.Column(db.Integer, db.ForeignKey('materials.id'), nullable=False)
+    counted_quantity = db.Column(db.Float, nullable=False)
+    count_date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+    difference = db.Column(db.Float)  # الفرق بين الرصيد المحسوب والفعلي
+    notes = db.Column(db.Text)
+    counted_by = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # العلاقات
+    material = db.relationship('Material', backref='inventory_counts')
+
+    def __repr__(self):
+        return f'<InventoryCount {self.material.name} - {self.counted_quantity}>'
+
+
+class StockAddition(db.Model):
+    """سجل إضافات المخزون"""
+    __tablename__ = 'stock_additions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    material_id = db.Column(db.Integer, db.ForeignKey('materials.id'), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    notes = db.Column(db.Text)
+    added_by = db.Column(db.String(100))
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    material = db.relationship('Material', backref='stock_additions')
+
+    def __repr__(self):
+        return f'<StockAddition {self.material.name} - +{self.quantity}>'
+
+
+class StockAdjustment(db.Model):
+    """سجل تعديلات المخزون"""
+    __tablename__ = 'stock_adjustments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    material_id = db.Column(db.Integer, db.ForeignKey('materials.id'), nullable=False)
+    old_balance = db.Column(db.Float, nullable=False)
+    new_balance = db.Column(db.Float, nullable=False)
+    difference = db.Column(db.Float, nullable=False)  # موجب للإضافة، سالب للخصم
+    reason = db.Column(db.Text, nullable=False)
+    adjusted_by = db.Column(db.String(100))
+    adjusted_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    material = db.relationship('Material', backref='stock_adjustments')
+
+    def __repr__(self):
+        return f'<StockAdjustment {self.material.name} - {self.difference:+.1f}>'

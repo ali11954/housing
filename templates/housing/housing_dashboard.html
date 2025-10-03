@@ -82,10 +82,10 @@
                             <svg width="120" height="120">
                                 <circle class="progress-ring-bg" cx="60" cy="60" r="54"></circle>
                                 <circle class="progress-ring-fill" cx="60" cy="60" r="54"
-                                        style="stroke-dashoffset: {{ 340 - (340 * analysis.occupancy_rate|default(0) / 100) }}"></circle>
+                                        id="progressRing"></circle>
                             </svg>
                             <div class="progress-text">
-                                <span class="percentage">{{ analysis.occupancy_rate|default(0) }}%</span>
+                                <span class="percentage" id="occupancyPercentage">{{ analysis.occupancy_rate|default(0) }}%</span>
                                 <span class="label">ممتلئ</span>
                             </div>
                         </div>
@@ -95,20 +95,21 @@
                     <div class="stat-details">
                         <div class="detail-item">
                             <span class="label">المشغول</span>
-                            <span class="value">{{ analysis.occupied }}</span>
+                            <span class="value" id="occupiedCount">{{ analysis.occupied }}</span>
                         </div>
                         <div class="detail-item">
                             <span class="label">الإجمالي</span>
-                            <span class="value">{{ analysis.total_beds }}</span>
+                            <span class="value" id="totalBedsCount">{{ analysis.total_beds }}</span>
                         </div>
                         <div class="detail-item">
                             <span class="label">الفارغ</span>
-                            <span class="value">{{ analysis.total_beds - analysis.occupied }}</span>
+                            <span class="value" id="vacantCount">{{ analysis.total_beds - analysis.occupied }}</span>
                         </div>
                     </div>
                     <div class="progress-bar-container">
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: {{ analysis.occupancy_rate|default(0) }}%"></div>
+                            <div class="progress-fill" id="progressBarFill"
+                                 style="width: {{ analysis.occupancy_rate|default(0) }}%"></div>
                         </div>
                     </div>
                 </div>
@@ -122,7 +123,7 @@
                     <i class="fas fa-brain"></i>
                 </div>
                 <div class="stat-info">
-                    <h4>الذكاء الاصطناعي</h4>
+                    <h4> التسكين المثالي</h4>
                     <p>تحسين التوزيع الآلي</p>
                     <div class="stat-progress">
                         <div class="progress">
@@ -183,16 +184,16 @@
         <div class="chart-card">
             <div class="chart-header">
                 <div class="chart-title">
-                    <h3>
+                    <h2>
                         <i class="fas fa-users"></i>
                         الموظفين حسب نوع الخدمة
-                    </h3>
+                    </h2>
                 </div>
                 <div class="chart-controls">
                     <select id="companyFilter" class="modern-select">
                         <option value="all">كل الشركات</option>
-                        {% for comp in employees_by_service.keys() %}
-                            <option value="{{ comp }}">{{ comp }}</option>
+                        {% for company in companies %}
+                            <option value="{{ company }}">{{ company }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -203,19 +204,446 @@
             <div class="chart-footer">
                 <div class="total-badge">
                     <i class="fas fa-users"></i>
-                    <span>الإجمالي: <strong id="totalEmployees">0</strong> موظف</span>
+                    <span>الإجمالي: <strong id="totalEmployees">{{ employees|length if employees else 0 }}</strong> موظف</span>
                 </div>
             </div>
         </div>
     </div>
 
-</div>
-
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
+<script>
+
+    // بيانات السكنات من الخادم
+
+const housingData = {
+    {% for h in housings_data %}
+    "{{ h.name }}": {
+        name: "{{ h.name }}",
+        total_beds: {{ h.total_beds }},
+        occupied_beds: {{ h.occupied_beds }},
+        empty_beds: {{ h.empty_beds }},
+        occupancy_rate: {{ h.occupancy_rate }}
+    },
+    {% endfor %}
+    "all": {
+        name: "all",
+        total_beds: {{ analysis.total_beds }},
+        occupied_beds: {{ analysis.occupied }},
+        empty_beds: {{ analysis.vacant }},
+        occupancy_rate: {{ analysis.occupancy_rate }}
+    }
+};
+
+// بيانات الخدمات
+const serviceDataByCompany = {
+    {% for company, services in employees_by_service_company.items() %}
+    "{{ company }}": {
+        {% for service, count in services.items() %}
+        "{{ service }}": {{ count }},
+        {% endfor %}
+    },
+    {% endfor %}
+};
+
+const allServices = {{ employees_by_service|tojson }};
+const employeesByCompany = {{ employees_by_company|tojson }};
+const housingsDataArray = {{ housings_data|tojson }};
+
+// المتغيرات العالمية للمخططات
+let empChart, bedsChart, serviceChart;
+
+// تحديث البيانات عند اختيار سكن - الإصدار المصحح
+function updateHousingStats(selectedHousing) {
+    console.log('🔄 تحديث إحصائيات السكن:', selectedHousing);
+
+    const data = housingData[selectedHousing];
+    if (!data) {
+        console.error('❌ لا توجد بيانات للسكن:', selectedHousing);
+        return;
+    }
+
+    // تحديث النسب والنصوص مع تأثيرات
+    animateValue('occupancyPercentage', parseInt(document.getElementById('occupancyPercentage').textContent) || 0, Math.round(data.occupancy_rate), '%');
+    animateValue('occupiedCount', parseInt(document.getElementById('occupiedCount').textContent) || 0, data.occupied_beds, '');
+    animateValue('totalBedsCount', parseInt(document.getElementById('totalBedsCount').textContent) || 0, data.total_beds, '');
+    animateValue('vacantCount', parseInt(document.getElementById('vacantCount').textContent) || 0, data.empty_beds, '');
+
+    // تحديث الدائرة المتحركة
+    const circumference = 2 * Math.PI * 54;
+    const offset = circumference - (data.occupancy_rate / 100 * circumference);
+    document.getElementById('progressRing').style.strokeDashoffset = offset;
+
+    // تحديث شريط التقدم مع تأثير
+    const progressBar = document.getElementById('progressBarFill');
+    progressBar.style.transition = 'width 0.8s ease';
+    progressBar.style.width = data.occupancy_rate + '%';
+
+    console.log('✅ تم تحديث البيانات:', data);
+}
+
+// دالة للعد المتدرج للقيم
+function animateValue(elementId, start, end, suffix) {
+    const element = document.getElementById(elementId);
+    const duration = 800;
+    const startTime = performance.now();
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // تأثير easeOut
+        const easeProgress = 1 - Math.pow(1 - progress, 3);
+        const currentValue = Math.floor(start + (end - start) * easeProgress);
+
+        element.textContent = currentValue + suffix;
+
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+
+    requestAnimationFrame(update);
+}
+
+// تحديث المخطط حسب الشركة المحددة
+function updateServiceChart(selectedCompany = 'all') {
+    let chartData = {};
+
+    if (selectedCompany === 'all') {
+        chartData = allServices;
+    } else {
+        chartData = serviceDataByCompany[selectedCompany] || {};
+    }
+
+    // تحديث العدد الإجمالي مع تأثير
+    const totalEmployees = Object.values(chartData).reduce((sum, count) => sum + count, 0);
+    animateValue('totalEmployees', parseInt(document.getElementById('totalEmployees').textContent) || 0, totalEmployees, '');
+
+    // تحديث المخطط البياني
+    renderServiceTypeChart(chartData);
+}
+
+// دالة لعرض المخطط البياني لأنواع الخدمات
+function renderServiceTypeChart(data) {
+    const ctx = document.getElementById('serviceTypeChart').getContext('2d');
+
+    if (serviceChart) {
+        serviceChart.destroy();
+    }
+
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+
+    serviceChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: [
+                    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+                    '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+                    '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    rtl: true,
+                    labels: {
+                        font: {
+                            family: 'Arial, sans-serif',
+                            size: 12
+                        },
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    rtl: true,
+                    bodyFont: {
+                        family: 'Arial, sans-serif'
+                    }
+                }
+            },
+            cutout: '60%',
+            animation: {
+                animateScale: true,
+                animateRotate: true
+            }
+        }
+    });
+}
+
+// تهيئة مخطط الموظفين بالشركات
+function initEmployeesChart() {
+    const ctxEmp = document.getElementById('employeesChart').getContext('2d');
+
+    if (empChart) {
+        empChart.destroy();
+    }
+
+    const companyNames = Object.keys(employeesByCompany);
+    const employeeCounts = Object.values(employeesByCompany);
+
+    empChart = new Chart(ctxEmp, {
+        type: 'bar',
+        data: {
+            labels: companyNames,
+            datasets: [{
+                label: 'عدد الموظفين',
+                data: employeeCounts,
+                backgroundColor: createGradient(ctxEmp, '#4361ee', '#3a0ca3'),
+                borderColor: '#3a0ca3',
+                borderWidth: 1,
+                borderRadius: 8,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    rtl: true,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleFont: {
+                        size: 14
+                    },
+                    bodyFont: {
+                        size: 13
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    },
+                    ticks: {
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            size: 11
+                        }
+                    }
+                }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
+}
+
+// تهيئة مخطط توزيع الأسرة
+function initBedsChart() {
+    const ctxBeds = document.getElementById('bedsChart').getContext('2d');
+
+    if (bedsChart) {
+        bedsChart.destroy();
+    }
+
+    const housingNames = housingsDataArray.map(h => h.name);
+    const occupiedBeds = housingsDataArray.map(h => h.occupied_beds);
+    const emptyBeds = housingsDataArray.map(h => h.empty_beds);
+
+    bedsChart = new Chart(ctxBeds, {
+        type: 'bar',
+        data: {
+            labels: housingNames,
+            datasets: [
+                {
+                    label: 'مشغولة',
+                    data: occupiedBeds,
+                    backgroundColor: createGradient(ctxBeds, '#e74c3c', '#c0392b'),
+                    borderColor: '#c0392b',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                },
+                {
+                    label: 'فارغة',
+                    data: emptyBeds,
+                    backgroundColor: createGradient(ctxBeds, '#2ecc71', '#27ae60'),
+                    borderColor: '#27ae60',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    rtl: true,
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    stacked: false,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    }
+                },
+                x: {
+                    stacked: false,
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
+}
+
+// دالة مساعدة لإنشاء تدرج ألوان
+function createGradient(ctx, color1, color2) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, color1);
+    gradient.addColorStop(1, color2);
+    return gradient;
+}
+
+// تهيئة جميع المخططات
+function initAllCharts() {
+    initEmployeesChart();
+    initBedsChart();
+    updateServiceChart('all');
+}
+
+// أحداث التغيير
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 تهيئة لوحة التحكم...');
+
+    // تهيئة المخططات
+    initAllCharts();
+
+    // حدث تغيير السكن
+    document.getElementById('housingFilter').addEventListener('change', function() {
+        updateHousingStats(this.value);
+    });
+
+    // حدث تغيير الشركة
+    document.getElementById('companyFilter').addEventListener('change', function() {
+        updateServiceChart(this.value);
+    });
+
+    // التهيئة الأولى للإحصائيات
+    updateHousingStats('all');
+
+    // إضافة CSS للدائرة المتحركة
+    const style = document.createElement('style');
+    style.textContent = `
+        .progress-ring-fill {
+            fill: transparent;
+            stroke: url(#progressGradient);
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.8s ease;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            stroke-dasharray: 339.292;
+            stroke-dashoffset: 339.292;
+        }
+        .progress-ring-bg {
+            fill: transparent;
+            stroke: #f0f0f0;
+            stroke-width: 8;
+        }
+        .value {
+            transition: all 0.3s ease;
+            font-weight: 700;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .pulse-effect {
+            animation: pulse 0.5s ease;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // إضافة تدرج اللون للدائرة
+    const svg = document.querySelector('.progress-ring svg');
+    const defs = document.createElement('defs');
+    const gradient = document.createElement('linearGradient');
+    gradient.id = 'progressGradient';
+    gradient.setAttribute('x1', '0%');
+    gradient.setAttribute('y1', '0%');
+    gradient.setAttribute('x2', '100%');
+    gradient.setAttribute('y2', '100%');
+
+    const stop1 = document.createElement('stop');
+    stop1.setAttribute('offset', '0%');
+    stop1.setAttribute('stop-color', '#4361ee');
+
+    const stop2 = document.createElement('stop');
+    stop2.setAttribute('offset', '100%');
+    stop2.setAttribute('stop-color', '#3a0ca3');
+
+    gradient.appendChild(stop1);
+    gradient.appendChild(stop2);
+    defs.appendChild(gradient);
+    svg.appendChild(defs);
+
+    console.log('✅ تم تحميل لوحة التحكم بنجاح');
+});
+</script>
 <style>
+    /* تحقق من أن العناصر الجديدة تظهر */
+.kpi-section, .alerts-section {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.kpi-grid, .alerts-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    gap: 20px !important;
+}
+
+.kpi-card, .alert-card {
+    display: flex !important;
+    background: white !important;
+    border-radius: 16px !important;
+    padding: 25px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+    margin-bottom: 0 !important;
+}
     :root {
         --primary: #4361ee;
         --primary-light: #4895ef;
@@ -742,154 +1170,6 @@
             font-size: 2rem;
         }
     }
+
 </style>
-
-<script>
-    // البيانات
-    const housingsData = {{ housings_data|tojson }};
-    const overallAnalysis = {{ analysis|tojson }};
-    const employeesByService = {{ employees_by_service|tojson }};
-    const employeesByServiceCompany = {{ employees_by_service_company|tojson }};
-    const employeesByCompany = {{ employees_by_company|tojson }};
-
-    let empChart, bedsChart, serviceChart;
-
-    // تهيئة المخططات
-    function initCharts() {
-        // مخطط الموظفين بالشركات
-        const ctxEmp = document.getElementById('employeesChart').getContext('2d');
-        empChart = new Chart(ctxEmp, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(employeesByCompany),
-                datasets: [{
-                    label: 'عدد الموظفين',
-                    data: Object.values(employeesByCompany),
-                    backgroundColor: 'rgba(67, 97, 238, 0.8)',
-                    borderColor: 'rgba(67, 97, 238, 1)',
-                    borderWidth: 1,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(0,0,0,0.05)' }
-                    },
-                    x: {
-                        grid: { display: false }
-                    }
-                }
-            }
-        });
-
-        // مخطط توزيع الأسرة
-        const ctxBeds = document.getElementById('bedsChart').getContext('2d');
-        bedsChart = new Chart(ctxBeds, {
-            type: 'bar',
-            data: {
-                labels: housingsData.map(h => h.name),
-                datasets: [
-                    {
-                        label: 'مشغولة',
-                        data: housingsData.map(h => h.occupied_beds),
-                        backgroundColor: 'rgba(220, 53, 69, 0.8)',
-                        borderColor: 'rgba(220, 53, 69, 1)',
-                        borderWidth: 1,
-                        borderRadius: 8
-                    },
-                    {
-                        label: 'فارغة',
-                        data: housingsData.map(h => h.empty_beds),
-                        backgroundColor: 'rgba(40, 167, 69, 0.8)',
-                        borderColor: 'rgba(40, 167, 69, 1)',
-                        borderWidth: 1,
-                        borderRadius: 8
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(0,0,0,0.05)' }
-                    },
-                    x: {
-                        grid: { display: false }
-                    }
-                }
-            }
-        });
-
-        // مخطط نوع الخدمة
-        updateServiceChart(employeesByService);
-    }
-
-    // تحديث مخطط الخدمة
-    function updateServiceChart(dataObj) {
-        const serviceLabels = Object.keys(dataObj);
-        const serviceCounts = Object.values(dataObj);
-        const totalEmployees = serviceCounts.reduce((a, b) => a + b, 0);
-
-        document.getElementById("totalEmployees").innerText = totalEmployees;
-
-        if (serviceChart) serviceChart.destroy();
-
-        const ctx = document.getElementById('serviceTypeChart').getContext('2d');
-        serviceChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: serviceLabels,
-                datasets: [{
-                    label: 'عدد الموظفين',
-                    data: serviceCounts,
-                    backgroundColor: 'rgba(67, 97, 238, 0.8)',
-                    borderColor: 'rgba(67, 97, 238, 1)',
-                    borderWidth: 1,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(0,0,0,0.05)' }
-                    },
-                    x: {
-                        grid: { display: false }
-                    }
-                }
-            }
-        });
-    }
-
-    // التهيئة
-    document.addEventListener('DOMContentLoaded', function() {
-        initCharts();
-
-        // أحداث التغيير
-        document.getElementById("companyFilter").addEventListener("change", function() {
-            const selected = this.value;
-            if (selected === "all") {
-                updateServiceChart(employeesByService);
-            } else {
-                updateServiceChart(employeesByServiceCompany[selected] || {});
-            }
-        });
-    });
-</script>
-
 {% endblock %}

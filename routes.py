@@ -1703,6 +1703,7 @@ def build_filter_args():
 
 from collections import defaultdict
 
+
 @bp.route("/housing_dashboard")
 def housing_dashboard():
     # جلب كل الموظفين مع الشركة لتجنب lazy loading
@@ -1722,43 +1723,54 @@ def housing_dashboard():
     # عدد الموظفين لكل شركة
     employees_count_by_company = {name: len(emps) for name, emps in employees_by_company.items()}
 
-    # جلب بيانات السكنات
+    # جلب بيانات السكنات مع حساب الإشغال الحقيقي
     housings = HousingUnit.query.all()
     housings_data = []
 
+    # حساب الإشغال الحقيقي من BedAssignment
+    today = datetime.today().date()
+
     for housing in housings:
-        rooms_count = len(housing.rooms)
         total_beds = sum(room.total_beds for room in housing.rooms)
-        occupied_beds = sum(room.occupied_beds for room in housing.rooms)
+
+        # حساب الأسرة المشغولة فعلياً
+        occupied_beds = 0
+        for room in housing.rooms:
+            for bed in room.beds:
+                # التحقق إذا كان السرير مشغولاً بتخصيص نشط
+                active_assignment = BedAssignment.query.filter(
+                    BedAssignment.bed_id == bed.id,
+                    BedAssignment.active == True,
+                    BedAssignment.start_date <= today,
+                    (BedAssignment.end_date == None) | (BedAssignment.end_date >= today)
+                ).first()
+
+                if active_assignment:
+                    occupied_beds += 1
+
         empty_beds = total_beds - occupied_beds
+        occupancy_rate = round((occupied_beds / total_beds) * 100, 2) if total_beds > 0 else 0
+
         housings_data.append({
             "name": housing.name,
-            "rooms_count": rooms_count,
+            "rooms_count": len(housing.rooms),
             "total_beds": total_beds,
             "occupied_beds": occupied_beds,
-            "empty_beds": empty_beds
+            "empty_beds": empty_beds,
+            "occupancy_rate": occupancy_rate
         })
 
-    # جلب جميع الأسرة
-    beds = db.session.query(Bed).all()
-
-    # احسب المشغولة بناءً على أي قيمة تمثل الاحتلال
-    occupied_beds = sum(1 for b in beds if str(b.is_occupied).lower() in ['true', '1', 'yes'])
-
-    # إجمالي الأسرة
-    total_beds = len(beds)
-
-    # الفارغة
-    vacant_beds = total_beds - occupied_beds
-
-    # نسبة الإشغال
-    occupancy_rate = round((occupied_beds / total_beds) * 100, 2) if total_beds else 0
+    # حساب الإجماليات العامة
+    total_beds_all = sum(h['total_beds'] for h in housings_data)
+    occupied_beds_all = sum(h['occupied_beds'] for h in housings_data)
+    vacant_beds_all = total_beds_all - occupied_beds_all
+    overall_occupancy_rate = round((occupied_beds_all / total_beds_all) * 100, 2) if total_beds_all > 0 else 0
 
     analysis = {
-        "total_beds": total_beds,
-        "occupied": occupied_beds,
-        "vacant": vacant_beds,
-        "occupancy_rate": occupancy_rate
+        "total_beds": total_beds_all,
+        "occupied": occupied_beds_all,
+        "vacant": vacant_beds_all,
+        "occupancy_rate": overall_occupancy_rate
     }
 
     # جلب كل الموظفين
@@ -1769,6 +1781,7 @@ def housing_dashboard():
     for emp in employees:
         unique_employees[emp.employee_code] = emp
     employees = list(unique_employees.values())
+
     # تجميع حسب الشركة + نوع الخدمة
     employees_by_service_company = {}
     total_by_service = {}
@@ -1798,7 +1811,6 @@ def housing_dashboard():
         employees_by_service_company=employees_by_service_company,  # لكل شركة
         companies=companies
     )
-
     # --- تمرير البيانات للقالب ---
 
 
@@ -4121,19 +4133,772 @@ def maintenance_team_add():
     return redirect(url_for("main.maintenance_teams"))
 
 
-from models import Assetwarehouse, Consumable, CleaningMaterial  # تأكد أن هذه النماذج موجودة
+from datetime import datetime, timedelta
+from flask import render_template, request, jsonify, flash, redirect, url_for
+from sqlalchemy import func
+
+
+# إضافة هذه الـ routes بعد route warehouse_dashboard الحالي
+
+from datetime import datetime, timedelta
+from flask import render_template, request, jsonify, flash, redirect, url_for, session
+from sqlalchemy import func, desc, and_, or_
+import json
+
+# استيراد النماذج الجديدة
+from models import Material, MaterialDisbursement, InventoryCount
+
+# routes.py
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, session
+from datetime import datetime, timedelta
+from sqlalchemy import func
+from models import db, Material, MaterialDisbursement,MaterialType,StockAddition,StockAdjustment
+
+
+
+# ===== الدوال الرئيسية للواجهات =====
+
+# ===== الدوال الرئيسية للواجهات =====
 
 @bp.route("/warehouse_dashboard")
 def warehouse_dashboard():
-    assets_warehouse = Assetwarehouse.query.all()
-    consumables = Consumable.query.all()
-    cleaning = CleaningMaterial.query.all()
+    """لوحة تحكم المستودع الرئيسية"""
+    materials = Material.query.order_by(Material.name).all()
+    recent_disbursements = MaterialDisbursement.query.order_by(
+        MaterialDisbursement.disbursement_date.desc()
+    ).limit(10).all()
+
+    total_materials = Material.query.count()
+    low_stock_materials = Material.query.filter(
+        Material.current_balance <= Material.min_stock_level
+    ).count()
+
+    monthly_disbursement = db.session.query(
+        func.sum(MaterialDisbursement.quantity)
+    ).filter(
+        MaterialDisbursement.disbursement_date >= datetime.now().replace(day=1)
+    ).scalar() or 0
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+
     return render_template("warehouse/warehouse_dashboard.html",
-                           assets_warehouse=assets_warehouse,
-                           consumables=consumables,
-                           cleaning=cleaning)
+                           materials=materials,
+                           disbursements=recent_disbursements,
+                           total_materials=total_materials,
+                           low_stock_materials=low_stock_materials,
+                           monthly_disbursement=monthly_disbursement,
+                           today=today,
+                           thirty_days_ago=thirty_days_ago)
 
 
+@bp.route("/materials_management")
+def materials_management():
+    """إدارة المواد - قالب مستقل"""
+    materials = Material.query.order_by(Material.name).all()
+    material_types = MaterialType.query.order_by(MaterialType.name).all()
+    disbursements = MaterialDisbursement.query.order_by(MaterialDisbursement.disbursement_date.desc()).all()
+
+    return render_template(
+        "warehouse/materials_management.html",
+        materials=materials,
+        material_types=material_types,
+        disbursements=disbursements
+    )
+
+@bp.route("/reports_dashboard")
+def reports_dashboard():
+    """لوحة التقارير - قالب مستقل"""
+    today = datetime.now().strftime("%Y-%m-%d")
+    thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+    return render_template("warehouse/reports_dashboard.html",
+                         today=today,
+                         thirty_days_ago=thirty_days_ago)
+
+# ===== دوال إدارة أنواع المواد =====
+
+@bp.route("/add_material_type", methods=["POST"])
+def add_material_type():
+    """إضافة نوع مادة جديد"""
+    try:
+        name = request.form.get('type_name')
+        description = request.form.get('type_description')
+        color = request.form.get('type_color', '#6c757d')
+
+        if not name:
+            flash('يرجى إدخال اسم النوع', 'error')
+            return redirect(url_for('main.materials_management'))
+
+        existing_type = MaterialType.query.filter_by(name=name).first()
+        if existing_type:
+            flash('يوجد نوع مادة بنفس الاسم مسبقاً', 'error')
+            return redirect(url_for('main.materials_management'))
+
+        new_type = MaterialType(name=name, description=description, color=color)
+        db.session.add(new_type)
+        db.session.commit()
+        flash('تم إضافة نوع المادة بنجاح', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'حدث خطأ أثناء إضافة نوع المادة: {str(e)}', 'error')
+
+    return redirect(url_for('main.materials_management'))
+
+@bp.route("/delete_material_type/<int:type_id>", methods=["POST"])
+def delete_material_type(type_id):
+    """حذف نوع مادة"""
+    try:
+        material_type = MaterialType.query.get_or_404(type_id)
+
+        if material_type.materials:
+            return jsonify({
+                'success': False,
+                'message': 'لا يمكن حذف النوع لأنه مرتبط بمواد موجودة'
+            })
+
+        db.session.delete(material_type)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'تم حذف نوع المادة بنجاح'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'حدث خطأ: {str(e)}'
+        })
+
+# ===== دوال إدارة المواد =====
+
+@bp.route("/add_material", methods=["POST"])
+def add_material():
+    """إضافة مادة جديدة"""
+    try:
+        material_name = request.form.get('material_name')
+        material_unit = request.form.get('material_unit')
+        initial_balance = float(request.form.get('initial_balance', 0))
+        min_stock_level = float(request.form.get('min_stock_level', 0))
+        material_type_id = request.form.get('material_type_id')
+
+        if not material_type_id:
+            flash('يرجى اختيار نوع المادة', 'error')
+            return redirect(url_for('main.materials_management'))
+
+        existing_material = Material.query.filter_by(name=material_name).first()
+        if existing_material:
+            flash('يوجد مادة بنفس الاسم مسبقاً', 'error')
+            return redirect(url_for('main.materials_management'))
+
+        new_material = Material(
+            name=material_name,
+            unit=material_unit,
+            initial_balance=initial_balance,
+            current_balance=initial_balance,
+            min_stock_level=min_stock_level,
+            material_type_id=material_type_id
+        )
+
+        db.session.add(new_material)
+        db.session.commit()
+        flash('تم إضافة المادة بنجاح', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'حدث خطأ أثناء إضافة المادة: {str(e)}', 'error')
+
+    return redirect(url_for('main.materials_management'))
+
+@bp.route("/update_material/<int:material_id>", methods=["POST"])
+def update_material(material_id):
+    """تحديث بيانات مادة"""
+    try:
+        material = Material.query.get_or_404(material_id)
+        material.name = request.form.get('material_name')
+        material.unit = request.form.get('material_unit')
+        material.min_stock_level = float(request.form.get('min_stock_level', 0))
+        material.material_type_id = request.form.get('material_type_id')
+
+        db.session.commit()
+        flash('تم تحديث المادة بنجاح', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'حدث خطأ أثناء تحديث المادة: {str(e)}', 'error')
+
+    return redirect(url_for('main.materials_management'))
+
+@bp.route("/delete_material", methods=["POST"])
+def delete_material():
+    """حذف مادة"""
+    try:
+        data = request.get_json()
+        material_id = data.get('material_id')
+        material = Material.query.get_or_404(material_id)
+
+        # التحقق من وجود صرف نشط فقط (غير ملغى)
+        active_disbursements = [d for d in material.disbursements if not d.is_cancelled]
+        if active_disbursements:
+            return jsonify({
+                'success': False,
+                'message': 'لا يمكن حذف المادة لأن لها عمليات صرف نشطة مرتبطة'
+            })
+
+        db.session.delete(material)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'تم حذف المادة بنجاح'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'حدث خطأ: {str(e)}'})
+
+# ===== دوال الصرف =====
+
+@bp.route("/disbursement_form", methods=["GET", "POST"])
+def disbursement_form():
+    """نموذج صرف المواد المستقل"""
+    if request.method == 'POST':
+        try:
+            material_id = request.form.get('material_id')
+            quantity = float(request.form.get('quantity', 0))
+            recipient = request.form.get('recipient')
+            department = request.form.get('department', '')
+            date = request.form.get('date')
+            notes = request.form.get('notes', '')
+            employee_code = request.form.get('employee_code')
+
+            material = Material.query.get_or_404(material_id)
+
+            # البحث عن الموظف
+            employee = None
+            if employee_code:
+                try:
+                    employee = Employee.query.filter_by(employee_code=int(employee_code)).first()
+                    if employee:
+                        employee_info = f"الموظف: {employee.name} - الوظيفة: {employee.job_title} - القسم: {employee.department} - نوع الخدمة: {employee.service_type} - السكن: {employee.company_housing_name} - الغرفة: {employee.room_number}"
+                        notes = f"{notes}\n{employee_info}".strip()
+                except ValueError:
+                    pass
+
+            if quantity > material.current_balance:
+                flash('الرصيد غير كافي للصرف', 'error')
+                return redirect(url_for('main.disbursement_form'))
+
+            disbursement = MaterialDisbursement(
+                material_id=material_id,
+                quantity=quantity,
+                disbursement_date=datetime.strptime(date, '%Y-%m-%d'),
+                recipient=recipient,
+                department=department,
+                notes=notes,
+                created_by=session.get('username', 'system')
+            )
+
+            material.current_balance -= quantity
+            db.session.add(disbursement)
+            db.session.commit()
+
+            if employee:
+                flash(f'تم صرف المادة بنجاح للموظف: {employee.name}', 'success')
+            else:
+                flash('تم صرف المادة بنجاح', 'success')
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'حدث خطأ أثناء الصرف: {str(e)}', 'error')
+
+        return redirect(url_for('main.disbursement_form'))
+
+    # إذا كان GET، عرض النموذج
+    materials = Material.query.order_by(Material.name).all()
+    recent_disbursements = MaterialDisbursement.query.order_by(
+        MaterialDisbursement.disbursement_date.desc()
+    ).limit(5).all()
+
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    return render_template("warehouse/disbursement_form.html",
+                           materials=materials,
+                           recent_disbursements=recent_disbursements,
+                           today=today)
+
+@bp.route("/get_employee_by_code/<employee_code>")
+def get_employee_by_code(employee_code):
+    """الحصول على بيانات الموظف باستخدام الكود"""
+    try:
+        employee_code_int = int(employee_code)
+        employee = Employee.query.filter_by(employee_code=employee_code_int).first()
+
+        if employee:
+            return jsonify({
+                'success': True,
+                'employee': {
+                    'name': employee.name or '',
+                    'job_title': employee.job_title or '',
+                    'department': employee.department or '',
+                    'service_type': employee.service_type or '',
+                    'company_housing_name': employee.company_housing_name or '',
+                    'room_number': employee.room_number or ''
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'لم يتم العثور على موظف بهذا الكود'
+            })
+
+    except ValueError:
+        return jsonify({
+            'success': False,
+            'message': 'كود الموظف يجب أن يكون رقماً'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'حدث خطأ في الخادم: {str(e)}'
+        })
+
+
+@bp.route("/get_material_types")
+def get_material_types():
+    """الحصول على أنواع المواد لـ JavaScript"""
+    try:
+        material_types = MaterialType.query.all()
+        types_data = [{
+            'id': type.id,
+            'name': type.name,
+            'color': type.color,
+            'description': type.description
+        } for type in material_types]
+
+        return jsonify({'types': types_data})
+    except Exception as e:
+        return jsonify({'types': [], 'error': str(e)})
+
+
+@bp.route("/get_disbursement_details/<int:disbursement_id>")
+def get_disbursement_details(disbursement_id):
+    """الحصول على تفاصيل عملية الصرف"""
+    try:
+        disbursement = MaterialDisbursement.query.get_or_404(disbursement_id)
+
+        details = {
+            'id': disbursement.id,
+            'material_name': disbursement.material.name,
+            'quantity': disbursement.quantity,
+            'unit': disbursement.material.unit,
+            'recipient': disbursement.recipient,
+            'department': disbursement.department or 'غير محدد',
+            'project': disbursement.project or 'غير محدد',
+            'disbursed_by': disbursement.created_by or 'غير معروف',
+            'disbursed_at': disbursement.disbursement_date.strftime('%Y-%m-%d'),
+            'notes': disbursement.notes or 'لا توجد ملاحظات',
+            'is_cancelled': disbursement.is_cancelled,
+            'cancellation_reason': disbursement.cancellation_reason,
+            'cancelled_by': disbursement.cancelled_by,
+            'cancelled_at': disbursement.cancelled_at.strftime('%Y-%m-%d %H:%M') if disbursement.cancelled_at else None
+        }
+
+        return jsonify({'success': True, 'disbursement': details})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@bp.route("/cancel_disbursement/<int:disbursement_id>", methods=['POST'])
+def cancel_disbursement(disbursement_id):
+    """إلغاء عملية صرف مواد"""
+    try:
+        disbursement = MaterialDisbursement.query.get_or_404(disbursement_id)
+
+        if disbursement.is_cancelled:
+            return jsonify({'success': False, 'message': 'تم إلغاء هذه العملية مسبقاً'})
+
+        data = request.get_json()
+        reason = data.get('reason', '').strip()
+        if not reason:
+            return jsonify({'success': False, 'message': 'يرجى إدخال سبب الإلغاء'})
+
+        # استعادة الكمية للمخزون
+        material = disbursement.material
+        material.current_balance += disbursement.quantity
+
+        # تحديث بيانات الإلغاء
+        disbursement.is_cancelled = True
+        disbursement.cancellation_reason = reason
+        disbursement.cancelled_by = current_user.username
+        disbursement.cancelled_at = datetime.utcnow()
+
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'تم إلغاء عملية الصرف واستعادة الكمية إلى المخزون بنجاح'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'حدث خطأ أثناء الإلغاء: {str(e)}'})
+
+
+@bp.route("/stock_management")
+def stock_management():
+    """إدارة المخزون والإضافات"""
+    materials = Material.query.order_by(Material.name).all()
+    material_types = MaterialType.query.order_by(MaterialType.name).all()
+
+    # حساب الإحصائيات
+    total_stock_value = sum(material.current_balance for material in materials)
+    low_stock_count = sum(1 for material in materials if
+                          material.current_balance <= material.min_stock_level and material.current_balance > 0)
+
+    # الإضافات الحديثة (آخر أسبوع)
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    recent_additions = StockAddition.query.filter(
+        StockAddition.added_at >= week_ago
+    ).order_by(StockAddition.added_at.desc()).limit(10).all()
+    recent_additions_count = len(recent_additions)
+
+    return render_template(
+        "warehouse/stock_management.html",
+        materials=materials,
+        material_types=material_types,
+        total_stock_value=total_stock_value,
+        low_stock_count=low_stock_count,
+        recent_additions=recent_additions,
+        recent_additions_count=recent_additions_count
+    )
+
+
+@bp.route("/get_material_details/<int:material_id>")
+def get_material_details(material_id):
+    """الحصول على تفاصيل المادة"""
+    try:
+        material = Material.query.get_or_404(material_id)
+
+        details = {
+            'id': material.id,
+            'name': material.name,
+            'type_name': material.type.name,
+            'type_color': material.type.color,
+            'unit': material.unit,
+            'initial_balance': material.initial_balance,
+            'current_balance': material.current_balance,
+            'min_stock_level': material.min_stock_level,
+            'created_at': material.created_at.strftime('%Y-%m-%d %H:%M')
+        }
+
+        return jsonify({'success': True, 'material': details})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@bp.route("/add_stock/<int:material_id>", methods=['POST'])
+def add_stock(material_id):
+    """إضافة كمية إلى مخزون مادة"""
+    try:
+        material = Material.query.get_or_404(material_id)
+        quantity = float(request.form.get('quantity', 0))
+        notes = request.form.get('notes', '').strip()
+
+        if quantity <= 0:
+            flash('يرجى إدخال كمية صحيحة', 'error')
+            return redirect(url_for('main.materials_management'))
+
+        # تحديث المخزون
+        material.current_balance += quantity
+        material.updated_at = datetime.utcnow()
+
+        # تسجيل عملية الإضافة في سجل المخزون (اختياري)
+        stock_addition = StockAddition(
+            material_id=material.id,
+            quantity=quantity,
+            notes=notes,
+            added_by=current_user.username
+        )
+        db.session.add(stock_addition)
+
+        db.session.commit()
+        flash(f'تم إضافة {quantity} {material.unit} إلى مخزون {material.name} بنجاح', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'حدث خطأ أثناء إضافة المخزون: {str(e)}', 'error')
+
+    return redirect(url_for('main.materials_management'))
+
+
+@bp.route("/adjust_stock/<int:material_id>", methods=['POST'])
+def adjust_stock(material_id):
+    """تعديل المخزون يدوياً"""
+    try:
+        material = Material.query.get_or_404(material_id)
+        new_balance = float(request.form.get('new_balance', 0))
+        adjustment_reason = request.form.get('reason', '').strip()
+
+        if new_balance < 0:
+            flash('لا يمكن أن يكون المخزون سالباً', 'error')
+            return redirect(url_for('main.materials_management'))
+
+        # حساب الفرق
+        difference = new_balance - material.current_balance
+
+        # تحديث المخزون
+        material.current_balance = new_balance
+        material.updated_at = datetime.utcnow()
+
+        # تسجيل عملية التعديل
+        stock_adjustment = StockAdjustment(
+            material_id=material.id,
+            old_balance=material.current_balance - difference,
+            new_balance=new_balance,
+            difference=difference,
+            reason=adjustment_reason,
+            adjusted_by=current_user.username
+        )
+        db.session.add(stock_adjustment)
+
+        db.session.commit()
+        flash(f'تم تعديل مخزون {material.name} إلى {new_balance} {material.unit} بنجاح', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'حدث خطأ أثناء تعديل المخزون: {str(e)}', 'error')
+
+    return redirect(url_for('main.materials_management'))
+
+# ===== دوال التقارير الموحدة =====
+
+@bp.route("/api/report_data")
+def api_report_data():
+    """بيانات التقارير الموحدة مع دعم جميع أنواع التقارير والتصفية"""
+    try:
+        report_type = request.args.get('type', 'inventory')
+        from_date = request.args.get('from_date')
+        to_date = request.args.get('to_date')
+        material_type_id = request.args.get('material_type_id')
+
+        if report_type == 'inventory':
+            return generate_inventory_report(material_type_id)
+        elif report_type == 'disbursement':
+            return generate_disbursement_report(from_date, to_date, material_type_id)
+        elif report_type == 'statistics':
+            return generate_statistics_report(from_date, to_date)
+        elif report_type == 'low_stock':
+            return generate_low_stock_report(material_type_id)
+        else:
+            return jsonify({'error': 'نوع التقرير غير معروف'})
+
+    except Exception as e:
+        return jsonify({'error': f'حدث خطأ: {str(e)}'})
+
+def generate_inventory_report(material_type_id=None):
+    """تقرير المخزون"""
+    query = Material.query.join(MaterialType)
+
+    if material_type_id and material_type_id != 'all':
+        query = query.filter(Material.material_type_id == material_type_id)
+
+    materials = query.order_by(Material.name).all()
+
+    total_initial = sum(m.initial_balance for m in materials)
+    total_current = sum(m.current_balance for m in materials)
+    total_disbursed = total_initial - total_current
+
+    return jsonify({
+        'materials': [
+            {
+                'name': m.name,
+                'unit': m.unit,
+                'initial_balance': m.initial_balance,
+                'current_balance': m.current_balance,
+                'min_stock_level': m.min_stock_level,
+                'type_name': m.type.name,
+                'type_color': m.type.color
+            } for m in materials
+        ],
+        'total_initial': total_initial,
+        'total_current': total_current,
+        'total_disbursed': total_disbursed,
+        'material_count': len(materials)
+    })
+
+
+def generate_disbursement_report(from_date=None, to_date=None, material_type_id=None):
+    """تقرير الصرف"""
+    query = MaterialDisbursement.query.join(Material).join(MaterialType)
+
+    # تطبيق الفلترة حسب التاريخ
+    if from_date:
+        try:
+            from_date = datetime.strptime(from_date, '%Y-%m-%d')
+            query = query.filter(MaterialDisbursement.disbursement_date >= from_date)
+        except ValueError:
+            pass  # تجاهل إذا كان التاريخ غير صحيح
+
+    if to_date:
+        try:
+            to_date = datetime.strptime(to_date, '%Y-%m-%d')
+            query = query.filter(MaterialDisbursement.disbursement_date <= to_date)
+        except ValueError:
+            pass  # تجاهل إذا كان التاريخ غير صحيح
+
+    # تطبيق الفلترة حسب نوع المادة
+    if material_type_id and material_type_id != 'all':
+        query = query.filter(Material.material_type_id == material_type_id)
+
+    disbursements = query.order_by(MaterialDisbursement.disbursement_date.desc()).all()
+
+    total_quantity = sum(d.quantity for d in disbursements) if disbursements else 0
+
+    # حساب المتوسط اليومي
+    daily_avg = 0
+    if from_date and to_date and disbursements:
+        try:
+            days_count = (to_date - from_date).days + 1
+            daily_avg = total_quantity / days_count if days_count > 0 else 0
+        except:
+            daily_avg = total_quantity / 30 if total_quantity > 0 else 0
+
+    return jsonify({
+        'disbursements': [
+            {
+                'date': d.disbursement_date.strftime('%Y-%m-%d'),
+                'material_name': d.material.name,
+                'unit': d.material.unit,
+                'quantity': d.quantity,
+                'recipient': d.recipient,
+                'department': d.department or '',
+                'notes': d.notes or '',
+                'type_name': d.material.type.name,
+                'type_color': d.material.type.color
+            } for d in disbursements
+        ],
+        'total_quantity': total_quantity,
+        'disbursement_count': len(disbursements),
+        'daily_avg': round(daily_avg, 2)
+    })
+
+def generate_statistics_report(from_date=None, to_date=None):
+    """تقرير الإحصائيات العامة"""
+    # إحصائيات المخزون
+    total_materials = Material.query.count()
+    low_stock_count = Material.query.filter(
+        Material.current_balance <= Material.min_stock_level
+    ).count()
+
+    materials = Material.query.all()
+    total_initial_balance = sum(m.initial_balance for m in materials)
+    total_current_balance = sum(m.current_balance for m in materials)
+    total_disbursed = total_initial_balance - total_current_balance
+
+    # إحصائيات الصرف
+    query = MaterialDisbursement.query
+    if from_date:
+        from_date = datetime.strptime(from_date, '%Y-%m-%d')
+        query = query.filter(MaterialDisbursement.disbursement_date >= from_date)
+    if to_date:
+        to_date = datetime.strptime(to_date, '%Y-%m-%d')
+        query = query.filter(MaterialDisbursement.disbursement_date <= to_date)
+
+    total_disbursements = query.count()
+    total_disbursed_quantity = db.session.query(
+        func.sum(MaterialDisbursement.quantity)
+    ).filter(
+        MaterialDisbursement.disbursement_date.between(from_date, to_date)
+    ).scalar() or 0
+
+    # المواد الأكثر صرفاً
+    top_materials = db.session.query(
+        Material.name,
+        func.sum(MaterialDisbursement.quantity).label('total_quantity')
+    ).join(MaterialDisbursement).group_by(Material.id).order_by(
+        func.sum(MaterialDisbursement.quantity).desc()
+    ).limit(5).all()
+
+    # توزيع المواد حسب النوع
+    type_distribution = db.session.query(
+        MaterialType.name,
+        MaterialType.color,
+        func.count(Material.id).label('count')
+    ).join(Material).group_by(MaterialType.id).all()
+
+    return jsonify({
+        'total_materials': total_materials,
+        'low_stock_count': low_stock_count,
+        'total_initial_balance': total_initial_balance,
+        'total_current_balance': total_current_balance,
+        'total_disbursed': total_disbursed,
+        'total_disbursements': total_disbursements,
+        'total_disbursed_quantity': total_disbursed_quantity,
+        'daily_avg': round(total_disbursed_quantity / 30, 2) if total_disbursed_quantity > 0 else 0,
+        'top_materials': [
+            {'name': mat[0], 'total_quantity': float(mat[1] or 0)}
+            for mat in top_materials
+        ],
+        'type_distribution': [
+            {'name': dist[0], 'color': dist[1], 'count': dist[2]}
+            for dist in type_distribution
+        ]
+    })
+
+def generate_low_stock_report(material_type_id=None):
+    """تقرير المواد المنخفضة الرصيد"""
+    query = Material.query.join(MaterialType).filter(
+        Material.current_balance <= Material.min_stock_level
+    )
+
+    if material_type_id and material_type_id != 'all':
+        query = query.filter(Material.material_type_id == material_type_id)
+
+    low_stock_materials = query.order_by(
+        (Material.current_balance - Material.min_stock_level).asc()
+    ).all()
+
+    return jsonify({
+        'low_stock_materials': [
+            {
+                'name': m.name,
+                'unit': m.unit,
+                'current_balance': m.current_balance,
+                'min_stock_level': m.min_stock_level,
+                'type_name': m.type.name,
+                'type_color': m.type.color,
+                'deficit': max(0, m.min_stock_level - m.current_balance)
+            } for m in low_stock_materials
+        ],
+        'low_stock_count': len(low_stock_materials)
+    })
+
+# ===== واجهات API للبيانات الديناميكية =====
+
+@bp.route("/api/dashboard_stats")
+def api_dashboard_stats():
+    """إحصائيات لوحة التحكم"""
+    total_materials = Material.query.count()
+    low_stock_count = Material.query.filter(
+        Material.current_balance <= Material.min_stock_level
+    ).count()
+
+    today = datetime.now().date()
+    daily_disbursement = db.session.query(
+        func.sum(MaterialDisbursement.quantity)
+    ).filter(
+        MaterialDisbursement.disbursement_date == today
+    ).scalar() or 0
+
+    month_start = datetime.now().replace(day=1)
+    monthly_disbursement = db.session.query(
+        func.sum(MaterialDisbursement.quantity)
+    ).filter(
+        MaterialDisbursement.disbursement_date >= month_start
+    ).scalar() or 0
+
+    return jsonify({
+        'total_materials': total_materials,
+        'low_stock_count': low_stock_count,
+        'daily_disbursement': daily_disbursement,
+        'monthly_disbursement': monthly_disbursement
+    })
 
 @bp.route("/water_dashboard")
 def water_dashboard():
@@ -4347,10 +5112,18 @@ def daily_resident_view():
             column_totals[i] += count
 
     grand_total = sum(row["total"] for row in table_data)
-    grand_average = sum(row["average"] for row in table_data) / len(table_data) if table_data else 0
+
+    # ✅ التصحيح البديل: متوسط الأعمدة اليومية
+    non_zero_days = sum(1 for total in column_totals if total > 0)
+    if non_zero_days > 0:
+        grand_average = sum(column_totals) / non_zero_days
+    else:
+        grand_average = 0
     grand_average = round(grand_average, 1)
 
-    print(f"📊 [FINAL_SOLUTION] الإجمالي: {grand_total}, إجمالي أول يوم: {column_totals[0]}")
+    print(
+        f"📊 [FINAL_SOLUTION] الإجمالي: {grand_total}, إجمالي أول يوم: {column_totals[0]}, المتوسط العام: {grand_average}")
+
 
     return render_template(
         "water/daily_residents_form.html",

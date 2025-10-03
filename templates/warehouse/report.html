@@ -1,0 +1,415 @@
+<!-- templates/warehouse/reports_dashboard.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3"><i class="fas fa-chart-bar"></i> التقارير والإحصائيات</h1>
+                <div>
+                    <a href="{{ url_for('main.warehouse_dashboard') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right"></i> العودة للرئيسية
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- خيارات التقرير -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0"><i class="fas fa-cog"></i> خيارات التقرير</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="report_type" class="form-label">نوع التقرير</label>
+                            <select class="form-select" id="report_type">
+                                <option value="inventory">تقرير المخزون</option>
+                                <option value="disbursement">تقرير الصرف</option>
+                                <option value="statistics">إحصائيات عامة</option>
+                                <option value="low_stock">المواد المنخفضة</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="material_type_filter" class="form-label">نوع المادة</label>
+                            <select class="form-select" id="material_type_filter">
+                                <option value="all">جميع الأنواع</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="report_from" class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="report_from" value="{{ thirty_days_ago }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="report_to" class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="report_to" value="{{ today }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button class="btn btn-success w-100" onclick="generateReport()">
+                                <i class="fas fa-sync-alt"></i> عرض التقرير
+                            </button>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">&nbsp;</label>
+                            <button class="btn btn-outline-primary w-100" onclick="printReport()" id="printBtn" style="display: none;">
+                                <i class="fas fa-print"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نتائج التقرير -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-chart-line"></i> نتائج التقرير</h5>
+                </div>
+                <div class="card-body">
+                    <div id="report-results">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                            <h5>مرحباً في نظام التقارير</h5>
+                            <p>اختر نوع التقرير والفترة المطلوبة ثم اضغط على "عرض التقرير"</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+.table th {
+    font-weight: 600;
+}
+.report-summary {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 4px solid #007bff;
+}
+</style>
+
+<script>
+// تحميل أنواع المواد عند فتح الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    loadMaterialTypes();
+});
+
+// دالة لتحميل أنواع المواد
+function loadMaterialTypes() {
+    fetch('/get_material_types')
+        .then(response => response.json())
+        .then(data => {
+            const filterSelect = document.getElementById('material_type_filter');
+            filterSelect.innerHTML = '<option value="all">جميع الأنواع</option>';
+
+            data.types.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type.id;
+                option.textContent = type.name;
+                filterSelect.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading material types:', error);
+        });
+}
+
+// دالة توليد التقرير
+function generateReport() {
+    const reportType = document.getElementById('report_type').value;
+    const fromDate = document.getElementById('report_from').value;
+    const toDate = document.getElementById('report_to').value;
+    const materialTypeId = document.getElementById('material_type_filter').value;
+
+    document.getElementById('report-results').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">جاري التحميل...</span>
+            </div>
+            <p class="mt-2">جاري تحميل بيانات التقرير...</p>
+        </div>
+    `;
+
+    let url = `/api/report_data?type=${reportType}&from_date=${fromDate}&to_date=${toDate}`;
+    if (materialTypeId && materialTypeId !== 'all') {
+        url += `&material_type_id=${materialTypeId}`;
+    }
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            displayReport(data, reportType, fromDate, toDate);
+            document.getElementById('printBtn').style.display = 'block';
+        })
+        .catch(error => {
+            document.getElementById('report-results').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h6>خطأ في تحميل البيانات</h6>
+                    <p>حدث خطأ أثناء جلب بيانات التقرير</p>
+                </div>
+            `;
+        });
+}
+
+// دالة عرض التقرير
+function displayReport(data, reportType, fromDate, toDate) {
+    let html = '';
+
+    if (reportType === 'inventory') {
+        html = generateInventoryReport(data, fromDate, toDate);
+    } else if (reportType === 'disbursement') {
+        html = generateDisbursementReport(data, fromDate, toDate);
+    } else if (reportType === 'statistics') {
+        html = generateStatisticsReport(data, fromDate, toDate);
+    } else if (reportType === 'low_stock') {
+        html = generateLowStockReport(data);
+    }
+
+    document.getElementById('report-results').innerHTML = html;
+}
+
+// دوال توليد التقارير المختلفة
+function generateInventoryReport(data, fromDate, toDate) {
+    return `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5><i class="fas fa-boxes"></i> تقرير المخزون</h5>
+            <div class="text-muted">الفترة: ${fromDate} إلى ${toDate}</div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead class="table-primary">
+                    <tr>
+                        <th>المادة</th>
+                        <th>النوع</th>
+                        <th>الرصيد الحالي</th>
+                        <th>الوحدة</th>
+                        <th>الحد الأدنى</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.materials.map(m => `
+                        <tr>
+                            <td class="fw-bold">${m.name}</td>
+                            <td><span class="badge" style="background-color: ${m.type_color}">${m.type_name}</span></td>
+                            <td class="${m.current_balance <= m.min_stock_level ? 'text-danger fw-bold' : 'text-success'}">
+                                ${m.current_balance}
+                            </td>
+                            <td>${m.unit}</td>
+                            <td>${m.min_stock_level}</td>
+                            <td>
+                                ${m.current_balance <= m.min_stock_level ?
+                                    '<span class="badge bg-danger"><i class="fas fa-exclamation-circle"></i> منخفض</span>' :
+                                    '<span class="badge bg-success"><i class="fas fa-check-circle"></i> جيد</span>'
+                                }
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+        <div class="report-summary mt-3 p-3 rounded">
+            <h6><i class="fas fa-chart-pie"></i> ملخص التقرير:</h6>
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>إجمالي الرصيد الابتدائي:</strong> ${data.total_initial}
+                </div>
+                <div class="col-md-3">
+                    <strong>إجمالي الرصيد الحالي:</strong> ${data.total_current}
+                </div>
+                <div class="col-md-3">
+                    <strong>إجمالي المصروف:</strong> ${data.total_disbursed}
+                </div>
+                <div class="col-md-3">
+                    <strong>عدد المواد:</strong> ${data.materials.length}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function generateDisbursementReport(data, fromDate, toDate) {
+    if (data.disbursements && data.disbursements.length > 0) {
+        return `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-hand-holding-usd"></i> تقرير الصرف</h5>
+                <div class="text-muted">الفترة: ${fromDate} إلى ${toDate}</div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>المادة</th>
+                            <th>الكمية</th>
+                            <th>المستلم</th>
+                            <th>القسم</th>
+                            <th>ملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.disbursements.map(d => `
+                            <tr>
+                                <td>${d.date}</td>
+                                <td class="fw-bold">${d.material_name}</td>
+                                <td>${d.quantity} ${d.unit}</td>
+                                <td>${d.recipient}</td>
+                                <td>${d.department || '-'}</td>
+                                <td>${d.notes || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <div class="report-summary mt-3 p-3 rounded">
+                <h6><i class="fas fa-chart-bar"></i> ملخص التقرير:</h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>عدد عمليات الصرف:</strong> ${data.disbursements.length}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>إجمالي الكمية المصروفة:</strong> ${data.total_quantity || 0}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>متوسط الصرف اليومي:</strong> ${data.daily_avg || 0}
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        return `
+            <div class="alert alert-warning text-center">
+                <i class="fas fa-info-circle fa-2x mb-3"></i>
+                <h6>لا توجد عمليات صرف</h6>
+                <p>لا توجد عمليات صرف في الفترة المحددة</p>
+            </div>
+        `;
+    }
+}
+
+function generateStatisticsReport(data, fromDate, toDate) {
+    return `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5><i class="fas fa-chart-line"></i> إحصائيات عامة</h5>
+            <div class="text-muted">الفترة: ${fromDate} إلى ${toDate}</div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="fas fa-boxes"></i> إحصائيات المخزون</h6>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr><td>إجمالي عدد المواد:</td><td><strong>${data.total_materials}</strong></td></tr>
+                            <tr><td>المواد منخفضة الرصيد:</td><td><strong class="text-danger">${data.low_stock_count}</strong></td></tr>
+                            <tr><td>إجمالي الرصيد الابتدائي:</td><td><strong>${data.total_initial_balance}</strong></td></tr>
+                            <tr><td>إجمالي الرصيد الحالي:</td><td><strong>${data.total_current_balance}</strong></td></tr>
+                            <tr><td>إجمالي المصروف:</td><td><strong>${data.total_disbursed}</strong></td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-hand-holding-usd"></i> إحصائيات الصرف</h6>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr><td>إجمالي عمليات الصرف:</td><td><strong>${data.total_disbursements}</strong></td></tr>
+                            <tr><td>متوسط الصرف اليومي:</td><td><strong>${data.daily_avg}</strong></td></tr>
+                            <tr><td>أعلى مادة صرفاً:</td><td><strong>${data.top_material}</strong></td></tr>
+                            <tr><td>إجمالي الكمية المصروفة:</td><td><strong>${data.total_disbursed_quantity}</strong></td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function generateLowStockReport(data) {
+    if (data.low_stock_materials && data.low_stock_materials.length > 0) {
+        return `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-exclamation-triangle"></i> المواد المنخفضة الرصيد</h5>
+                <div class="text-danger">عدد المواد: ${data.low_stock_materials.length}</div>
+            </div>
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                يوجد ${data.low_stock_materials.length} مادة تحتاج إلى إعادة تخزين
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-danger">
+                        <tr>
+                            <th>المادة</th>
+                            <th>النوع</th>
+                            <th>الرصيد الحالي</th>
+                            <th>الوحدة</th>
+                            <th>الحد الأدنى</th>
+                            <th>العجز</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.low_stock_materials.map(m => {
+                            const deficit = m.min_stock_level - m.current_balance;
+                            return `
+                                <tr>
+                                    <td class="fw-bold">${m.name}</td>
+                                    <td><span class="badge" style="background-color: ${m.type_color}">${m.type_name}</span></td>
+                                    <td class="text-danger fw-bold">${m.current_balance}</td>
+                                    <td>${m.unit}</td>
+                                    <td>${m.min_stock_level}</td>
+                                    <td class="text-danger fw-bold">${deficit > 0 ? deficit : 0}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        return `
+            <div class="alert alert-success text-center">
+                <i class="fas fa-check-circle fa-2x mb-3"></i>
+                <h6>جميع المواد في مستوى جيد</h6>
+                <p>لا توجد مواد منخفضة الرصيد</p>
+            </div>
+        `;
+    }
+}
+
+// دالة الطباعة
+function printReport() {
+    const reportElement = document.getElementById('report-results');
+    const originalContents = document.body.innerHTML;
+
+    document.body.innerHTML = `
+        <div class="container mt-4">
+            <h4 class="text-center mb-4">تقرير المستودع</h4>
+            ${reportElement.innerHTML}
+        </div>
+    `;
+
+    window.print();
+    document.body.innerHTML = originalContents;
+    location.reload();
+}
+</script>
+{% endblock %}

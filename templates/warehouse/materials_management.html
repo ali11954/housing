@@ -1,0 +1,1103 @@
+<!-- templates/warehouse/materials_management.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- رأس الصفحة المحسّن -->
+    <div class="row">
+        <div class="col-12">
+            <div class="page-header d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex align-items-center">
+                    <div class="header-icon me-3">
+                        <i class="fas fa-boxes fa-2x text-primary"></i>
+                    </div>
+                    <div>
+                        <h1 class="h3 mb-0">إدارة المواد والمخزون</h1>
+                        <p class="text-muted mb-0">إدارة أنواع المواد والمخزون وتتبع المستويات</p>
+                    </div>
+                </div>
+                <div>
+                    <a href="{{ url_for('main.warehouse_dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-right me-2"></i> العودة للرئيسية
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+<!-- بطاقات الإحصائيات السريعة - معدلة -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ materials|length }}</h4>
+                        <p class="mb-0">إجمالي المواد</p>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-box fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">
+                            {% set good_count = 0 %}
+                            {% for material in materials %}
+                                {% set current = material.current_balance | float %}
+                                {% set min_level = material.min_stock_level | float %}
+                                {% if current > min_level %}
+                                    {% set good_count = good_count + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ good_count }}
+                        </h4>
+                        <p class="mb-0">مواد بمخزون جيد</p>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">
+                            {% set low_count = 0 %}
+                            {% for material in materials %}
+                                {% set current = material.current_balance | float %}
+                                {% set min_level = material.min_stock_level | float %}
+                                {% if current <= min_level %}
+                                    {% set low_count = low_count + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ low_count }}
+                        </h4>
+                        <p class="mb-0">مواد تحتاج إعادة طلب</p>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ material_types|length }}</h4>
+                        <p class="mb-0">أنواع المواد</p>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-tags fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- إدارة أنواع المواد - محسّن -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="card-title mb-0 d-flex align-items-center">
+                        <i class="fas fa-tags me-2"></i> إدارة أنواع المواد
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('main.add_material_type') }}" class="row g-3" id="materialTypeForm">
+                        <div class="col-md-3">
+                            <label for="type_name" class="form-label">اسم النوع <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="type_name" name="type_name" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="type_description" class="form-label">الوصف</label>
+                            <input type="text" class="form-control" id="type_description" name="type_description" placeholder="وصف مختصر للنوع">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="type_color" class="form-label">لون التصنيف</label>
+                            <input type="color" class="form-control form-control-color" id="type_color" name="type_color" value="#6c757d" title="اختر لون النوع">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-success w-100" id="addTypeBtn">
+                                <i class="fas fa-plus me-1"></i> إضافة نوع
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- قائمة الأنواع الحالية -->
+                    <div class="mt-4">
+                        <h6 class="mb-3">الأنواع الحالية:</h6>
+                        <div id="material-types-list" class="d-flex flex-wrap gap-2">
+                            <!-- سيتم ملؤها بالـ JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إضافة مواد جديدة - محسّن -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="card-title mb-0 d-flex align-items-center">
+                        <i class="fas fa-plus-circle me-2"></i> إضافة مادة جديدة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('main.add_material') }}" class="row g-3" id="materialForm">
+                        <div class="col-md-2">
+                            <label for="material_name" class="form-label">اسم المادة <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="material_name" name="material_name" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="material_type_id" class="form-label">نوع المادة <span class="text-danger">*</span></label>
+                            <select class="form-select" id="material_type_id" name="material_type_id" required>
+                                <option value="">اختر النوع</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="material_unit" class="form-label">الوحدة <span class="text-danger">*</span></label>
+                            <select class="form-select" id="material_unit" name="material_unit" required>
+                                <option value="">اختر الوحدة</option>
+                                <option value="كجم">كجم</option>
+                                <option value="لتر">لتر</option>
+                                <option value="قطعة">قطعة</option>
+                                <option value="علبة">علبة</option>
+                                <option value="متر">متر</option>
+                                <option value="جرام">جرام</option>
+                                <option value="ملليتر">ملليتر</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="initial_balance" class="form-label">الرصيد الابتدائي <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" id="initial_balance" name="initial_balance" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="min_stock_level" class="form-label">الحد الأدنى للإنذار</label>
+                            <input type="number" step="0.01" class="form-control" id="min_stock_level" name="min_stock_level" value="0">
+                            <div class="form-text">صفر يعني لا يوجد إنذار</div>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-success w-100" id="addMaterialBtn">
+                                <i class="fas fa-plus me-1"></i> إضافة مادة
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- البحث والتصفية - جديد -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body py-3">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-search text-muted"></i>
+                                </span>
+                                <input type="text" id="searchInput" class="form-control border-start-0" placeholder="ابحث عن مادة...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="typeFilter" class="form-select">
+                                <option value="">جميع الأنواع</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="statusFilter" class="form-select">
+                                <option value="">جميع الحالات</option>
+                                <option value="good">مخزون جيد</option>
+                                <option value="low">مخزون منخفض</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button id="resetFilters" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-redo me-1"></i> إعادة تعيين
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول المواد - محسّن -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0 d-flex align-items-center">
+                        <i class="fas fa-list me-2"></i> قائمة المواد
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="materialsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="50">#</th>
+                                    <th>اسم المادة</th>
+                                    <th>النوع</th>
+                                    <th>الوحدة</th>
+                                    <th>الرصيد الابتدائي</th>
+                                    <th>الرصيد الحالي</th>
+                                    <th>الحد الأدنى</th>
+                                    <th>الحالة</th>
+                                    <th width="120">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for material in materials %}
+                                <tr data-type="{{ material.type.name }}" data-status="{{ 'low' if material.current_balance <= material.min_stock_level else 'good' }}">
+                                    <td class="text-muted">{{ loop.index }}</td>
+                                    <td class="fw-bold">{{ material.name }}</td>
+                                    <td>
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: {{ material.type.color }}; color: white;">
+                                            <i class="fas fa-tag me-1"></i> {{ material.type.name }}
+                                        </span>
+                                    </td>
+                                    <td>{{ material.unit }}</td>
+                                    <td>{{ material.initial_balance }}</td>
+                                    <td>
+                                        <span class="{{ 'text-danger fw-bold' if material.current_balance <= material.min_stock_level else 'text-success' }}">
+                                            {{ material.current_balance }}
+                                        </span>
+                                    </td>
+                                    <td>{{ material.min_stock_level }}</td>
+                                    <td>
+                                        {% if material.current_balance <= material.min_stock_level %}
+                                            <span class="badge bg-danger rounded-pill px-3 py-2">
+                                                <i class="fas fa-exclamation-circle me-1"></i> منخفض
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-success rounded-pill px-3 py-2">
+                                                <i class="fas fa-check-circle me-1"></i> جيد
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-outline-warning" onclick="editMaterial({{ material.id }}, '{{ material.name }}', '{{ material.unit }}', {{ material.min_stock_level }}, {{ material.material_type_id }}, {{ material.initial_balance }}, {{ material.current_balance }})" title="تعديل">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" onclick="deleteMaterial({{ material.id }}, '{{ material.name }}')" title="حذف">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-5">
+                                        <i class="fas fa-box-open fa-3x mb-3 d-block"></i>
+                                        <p class="mb-0">لا توجد مواد مضافة</p>
+                                        <small class="text-muted">استخدم نموذج إضافة مادة جديدة لإضافة مواد إلى النظام</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- نموذج إلغاء عملية الصرف -->
+<div class="modal fade" id="cancelDisbursementModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-ban me-2"></i> إلغاء عملية الصرف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="cancelDisbursementForm" method="POST">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>تنبيه:</strong> سيتم استعادة الكمية إلى المخزون بعد الإلغاء
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="disbursement_details" class="form-label">تفاصيل العملية:</label>
+                        <div id="disbursement_details" class="form-control bg-light" style="min-height: 80px; font-size: 0.9rem;">
+                            جاري تحميل التفاصيل...
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="cancel_reason" class="form-label">سبب الإلغاء <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="cancel_reason" name="reason" rows="3"
+                                  placeholder="يرجى كتابة سبب إلغاء عملية الصرف..." required></textarea>
+                        <div class="form-text">مطلوب لتسجيل سبب الإلغاء في السجلات</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> إغلاق
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-ban me-1"></i> تأكيد الإلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- قسم سجل عمليات الصرف -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-info text-white py-3">
+                <h5 class="card-title mb-0 d-flex align-items-center">
+                    <i class="fas fa-history me-2"></i> سجل عمليات الصرف
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="disbursementsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="60">#</th>
+                                <th>اسم المادة</th>
+                                <th>الكمية</th>
+                                <th>المشروع</th>
+                                <th>ملاحظات</th>
+                                <th>تاريخ الصرف</th>
+                                <th>تم الصرف بواسطة</th>
+                                <th>الحالة</th>
+                                <th width="150">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for disbursement in disbursements %}
+                            <tr class="{% if disbursement.cancellation %}table-secondary{% endif %}">
+                                <td>{{ loop.index }}</td>
+                                <td class="fw-bold">{{ disbursement.material.name }}</td>
+                                <td>
+                                    <span class="badge bg-primary rounded-pill px-3">
+                                        {{ disbursement.quantity }} {{ disbursement.material.unit }}
+                                    </span>
+                                </td>
+                                <td>{{ disbursement.project.name if disbursement.project else 'غير محدد' }}</td>
+                                <td>
+                                    {% if disbursement.notes %}
+                                        <span class="text-muted" title="{{ disbursement.notes }}">
+                                            {{ disbursement.notes[:50] }}{% if disbursement.notes|length > 50 %}...{% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">لا توجد</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ disbursement.disbursement_date.strftime('%Y-%m-%d') }}</td>
+<td>{{ disbursement.created_by }}</td>
+
+                                <td>
+                                    {% if disbursement.cancellation %}
+                                        <span class="badge bg-danger rounded-pill px-3">
+                                            <i class="fas fa-ban me-1"></i> ملغية
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success rounded-pill px-3">
+                                            <i class="fas fa-check me-1"></i> نشطة
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-outline-info"
+                                                onclick="viewDisbursementDetails({{ disbursement.id }})"
+                                                title="عرض التفاصيل">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% if not disbursement.cancellation %}
+                                        <button class="btn btn-outline-danger"
+                                                onclick="cancelDisbursement({{ disbursement.id }})"
+                                                title="إلغاء العملية">
+                                            <i class="fas fa-ban"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-4">
+                                    <i class="fas fa-clipboard-list fa-2x mb-3 d-block"></i>
+                                    <p class="mb-0">لا توجد عمليات صرف مسجلة</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- نموذج تعديل المادة - محسّن -->
+<div class="modal fade" id="editMaterialModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title"><i class="fas fa-edit me-2"></i> تعديل المادة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editMaterialForm" method="POST">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_material_name" class="form-label">اسم المادة <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_material_name" name="material_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_material_type" class="form-label">نوع المادة <span class="text-danger">*</span></label>
+                                <select class="form-select" id="edit_material_type" name="material_type_id" required>
+                                    <option value="">اختر النوع</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="edit_material_unit" class="form-label">الوحدة <span class="text-danger">*</span></label>
+                                <select class="form-select" id="edit_material_unit" name="material_unit" required>
+                                    <option value="كجم">كجم</option>
+                                    <option value="لتر">لتر</option>
+                                    <option value="قطعة">قطعة</option>
+                                    <option value="علبة">علبة</option>
+                                    <option value="متر">متر</option>
+                                    <option value="جرام">جرام</option>
+                                    <option value="ملليتر">ملليتر</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="edit_initial_balance" class="form-label">الرصيد الابتدائي</label>
+                                <input type="number" step="0.01" class="form-control" id="edit_initial_balance" name="initial_balance" readonly>
+                                <div class="form-text">غير قابل للتعديل</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="edit_current_balance" class="form-label">الرصيد الحالي</label>
+                                <input type="number" step="0.01" class="form-control" id="edit_current_balance" readonly>
+                                <div class="form-text">يتم تحديثه تلقائياً</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_min_stock_level" class="form-label">الحد الأدنى للإنذار <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" class="form-control" id="edit_min_stock_level" name="min_stock_level" required>
+                                <div class="form-text">سيتم إظهار إنذار عندما يصل الرصيد لهذا المستوى</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">حالة المخزون</label>
+                                <div class="form-control" id="edit_stock_status" readonly style="background-color: #f8f9fa;">
+                                    <span id="edit_status_text" class="fw-bold">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- معلومات إضافية -->
+                    <div class="alert alert-info mt-3">
+                        <h6><i class="fas fa-info-circle me-2"></i> ملاحظات:</h6>
+                        <ul class="mb-0">
+                            <li>لا يمكن تعديل الرصيد الابتدائي والحالي من هذه الشاشة</li>
+                            <li>لتعديل الرصيد، استخدم شاشة الجرد أو أضف عملية صرف/إضافة</li>
+                            <li>سيتم تحديث وقت التعديل تلقائياً</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save me-1"></i> حفظ التعديلات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- تذييل الصفحة - جديد -->
+<div class="row mt-4">
+    <div class="col-12 text-center text-muted">
+        <p class="mb-0">نظام إدارة المستودعات - تم التحديث في {{ now.strftime('%Y-%m-%d %H:%M') if now else '' }}</p>
+    </div>
+</div>
+
+<style>
+.page-header {
+    border-bottom: 1px solid #eaeaea;
+    padding-bottom: 1rem;
+}
+
+.stat-card {
+    border-radius: 10px;
+    transition: transform 0.3s ease;
+    border: none;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-icon {
+    opacity: 0.8;
+}
+
+.card {
+    border-radius: 10px;
+    border: none;
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.table th {
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.btn-group-sm > .btn {
+    border-radius: 5px;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.form-control, .form-select {
+    border-radius: 5px;
+}
+
+/* تحسينات للجداول */
+#materialsTable tbody tr {
+    transition: background-color 0.2s;
+}
+
+#materialsTable tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* تحسينات للأجهزة المحمولة */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .page-header > div:last-child {
+        margin-top: 1rem;
+        align-self: flex-end;
+    }
+
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+
+    .btn-group-sm > .btn {
+        padding: 0.2rem 0.4rem;
+    }
+}
+
+/* تأثيرات التحميل */
+.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.loading:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: inherit;
+}
+
+/* رسائل التنبيه المخصصة */
+.alert-custom {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* تخصيص شريط التمرير */
+.table-responsive::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+</style>
+<script>
+// دالة محسنة لتحميل أنواع المواد
+function loadMaterialTypes() {
+    console.log('Loading material types...');
+    fetch('/get_material_types')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Material types loaded:', data.types);
+            const typeSelect = document.getElementById('material_type_id');
+            const editTypeSelect = document.getElementById('edit_material_type');
+            const filterTypeSelect = document.getElementById('typeFilter');
+            const typesList = document.getElementById('material-types-list');
+
+            // مسح القوائم الحالية
+            if (typeSelect) typeSelect.innerHTML = '<option value="">اختر النوع</option>';
+            if (editTypeSelect) editTypeSelect.innerHTML = '<option value="">اختر النوع</option>';
+            if (filterTypeSelect) filterTypeSelect.innerHTML = '<option value="">جميع الأنواع</option>';
+            if (typesList) typesList.innerHTML = '';
+
+            // تعبئة القوائم
+            data.types.forEach(type => {
+                // قائمة الإضافة
+                if (typeSelect) {
+                    const option = document.createElement('option');
+                    option.value = type.id;
+                    option.textContent = type.name;
+                    typeSelect.appendChild(option);
+                }
+
+                // قائمة التعديل
+                if (editTypeSelect) {
+                    const editOption = document.createElement('option');
+                    editOption.value = type.id;
+                    editOption.textContent = type.name;
+                    editTypeSelect.appendChild(editOption);
+                }
+
+                // قائمة التصفية
+                if (filterTypeSelect) {
+                    const filterOption = document.createElement('option');
+                    filterOption.value = type.name;
+                    filterOption.textContent = type.name;
+                    filterTypeSelect.appendChild(filterOption);
+                }
+
+                // قائمة العرض
+                if (typesList) {
+                    const typeBadge = document.createElement('div');
+                    typeBadge.className = 'type-badge d-inline-flex align-items-center me-2 mb-2';
+                    typeBadge.style.cssText = `background-color: ${type.color}; color: white; border-radius: 20px; padding: 0.5rem 1rem; font-size: 0.875rem;`;
+                    typeBadge.innerHTML = `
+                        <i class="fas fa-tag me-1"></i> ${type.name}
+                        <button type="button" class="btn-close btn-close-white ms-2" onclick="deleteMaterialType(${type.id}, '${type.name}')" style="font-size: 0.6rem;"></button>
+                    `;
+                    typesList.appendChild(typeBadge);
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error loading material types:', error);
+            showAlert('حدث خطأ في تحميل أنواع المواد', 'danger');
+        });
+}
+
+// دالة تعديل المادة - الإصدار النهائي
+function editMaterial(materialId, name, unit, minStockLevel, typeId, initialBalance, currentBalance) {
+    console.log('Opening edit modal for material ID:', materialId);
+
+    // تعبئة الحقول الأساسية مباشرة
+    const nameField = document.getElementById('edit_material_name');
+    const unitField = document.getElementById('edit_material_unit');
+    const minStockField = document.getElementById('edit_min_stock_level');
+    const initialBalanceField = document.getElementById('edit_initial_balance');
+    const currentBalanceField = document.getElementById('edit_current_balance');
+
+    if (nameField) nameField.value = name;
+    if (unitField) unitField.value = unit;
+    if (minStockField) minStockField.value = minStockLevel;
+    if (initialBalanceField) initialBalanceField.value = initialBalance;
+    if (currentBalanceField) currentBalanceField.value = currentBalance;
+
+    // تحديث حالة المخزون
+    updateStockStatus(currentBalance, minStockLevel);
+
+    // تعيين نوع المادة - نستخدم setTimeout لضمان تحميل القائمة أولاً
+    setTimeout(() => {
+        const typeSelect = document.getElementById('edit_material_type');
+        if (typeSelect) {
+            typeSelect.value = typeId;
+            console.log('Setting material type to:', typeId, 'Current value:', typeSelect.value);
+
+            // إذا لم يتم تعيين القيمة، نعيد تحميل الأنواع
+            if (typeSelect.value !== typeId.toString() && typeId) {
+                console.log('Type not found, reloading material types...');
+                loadMaterialTypes();
+                // إعادة المحاولة بعد تحميل الأنواع
+                setTimeout(() => {
+                    typeSelect.value = typeId;
+                    console.log('After reload - Current value:', typeSelect.value);
+                }, 500);
+            }
+        }
+    }, 300);
+
+    // تعيين action للنموذج
+    const form = document.getElementById('editMaterialForm');
+    if (form) {
+        form.action = `/update_material/${materialId}`;
+        console.log('Form action set to:', form.action);
+    }
+
+    // إظهار المودال
+    const modalElement = document.getElementById('editMaterialModal');
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    }
+}
+
+// تحديث حالة المخزون في نموذج التعديل
+function updateStockStatus(currentBalance, minStockLevel) {
+    const statusElement = document.getElementById('edit_status_text');
+    const statusContainer = document.getElementById('edit_stock_status');
+
+    if (!statusElement || !statusContainer) return;
+
+    const current = parseFloat(currentBalance) || 0;
+    const minLevel = parseFloat(minStockLevel) || 0;
+
+    if (current <= minLevel) {
+        statusElement.textContent = 'مخزون منخفض';
+        statusContainer.style.backgroundColor = '#f8d7da';
+        statusElement.className = 'fw-bold text-danger';
+    } else {
+        statusElement.textContent = 'مخزون جيد';
+        statusContainer.style.backgroundColor = '#d1edff';
+        statusElement.className = 'fw-bold text-success';
+    }
+}
+
+// دالة حذف نوع مادة
+function deleteMaterialType(typeId, typeName) {
+    if (confirm(`هل أنت متأكد من حذف النوع "${typeName}"؟`)) {
+        showLoadingState(true);
+
+        fetch(`/delete_material_type/${typeId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadMaterialTypes();
+                showAlert(data.message, 'success');
+            } else {
+                showAlert(data.message, 'warning');
+            }
+        })
+        .catch(error => {
+            showAlert('حدث خطأ في الاتصال بالخادم', 'danger');
+        })
+        .finally(() => {
+            showLoadingState(false);
+        });
+    }
+}
+
+// دالة حذف المادة
+function deleteMaterial(materialId, materialName) {
+    if (confirm(`هل أنت متأكد من حذف المادة "${materialName}"؟`)) {
+        showLoadingState(true);
+
+        fetch('/delete_material', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ material_id: materialId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert(`تم حذف المادة "${materialName}" بنجاح`, 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showAlert(data.message || 'حدث خطأ أثناء الحذف', 'danger');
+            }
+        })
+        .catch(error => {
+            showAlert('حدث خطأ في الاتصال بالخادم', 'danger');
+        })
+        .finally(() => {
+            showLoadingState(false);
+        });
+    }
+}
+function cancelDisbursement(disbursementId) {
+    // إظهار المودال
+    const modalElement = document.getElementById('cancelDisbursementModal');
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+
+    // تحميل تفاصيل العملية عبر fetch (اختياري)
+    const detailsDiv = document.getElementById('disbursement_details');
+    detailsDiv.textContent = 'جارٍ تحميل التفاصيل...';
+
+    fetch(`/get_disbursement_details/${disbursementId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                detailsDiv.textContent = `
+                    المادة: ${data.material_name}
+                    الكمية: ${data.quantity} ${data.unit}
+                    المشروع: ${data.project || 'غير محدد'}
+                    الملاحظات: ${data.notes || 'لا توجد'}
+                `;
+            } else {
+                detailsDiv.textContent = 'فشل تحميل التفاصيل';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            detailsDiv.textContent = 'حدث خطأ أثناء التحميل';
+        });
+
+    // تعيين action للنموذج
+    const form = document.getElementById('cancelDisbursementForm');
+    form.action = `/cancel_disbursement/${disbursementId}`;
+}
+
+// إعداد مستمعي الأحداث
+function setupEventListeners() {
+    // البحث والتصفية
+    const searchInput = document.getElementById('searchInput');
+    const typeFilter = document.getElementById('typeFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const resetFilters = document.getElementById('resetFilters');
+
+    if (searchInput) searchInput.addEventListener('input', filterMaterials);
+    if (typeFilter) typeFilter.addEventListener('change', filterMaterials);
+    if (statusFilter) statusFilter.addEventListener('change', filterMaterials);
+    if (resetFilters) resetFilters.addEventListener('click', resetFilters);
+
+    // منع إرسال النموذج عند الضغط على Enter في حقل البحث
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+    }
+
+    // التحقق من صحة نموذج التعديل قبل الإرسال
+    const editForm = document.getElementById('editMaterialForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            const materialName = document.getElementById('edit_material_name')?.value.trim();
+            const materialType = document.getElementById('edit_material_type')?.value;
+            const materialUnit = document.getElementById('edit_material_unit')?.value;
+            const minStockLevel = document.getElementById('edit_min_stock_level')?.value;
+
+            if (!materialName) {
+                e.preventDefault();
+                showAlert('يرجى إدخال اسم المادة', 'warning');
+                return;
+            }
+            if (!materialType) {
+                e.preventDefault();
+                showAlert('يرجى اختيار نوع المادة', 'warning');
+                return;
+            }
+            if (!materialUnit) {
+                e.preventDefault();
+                showAlert('يرجى اختيار وحدة المادة', 'warning');
+                return;
+            }
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الحفظ...';
+            }
+        });
+    }
+
+    // إعادة تعيين حالة الزر عند إغلاق المودال
+    const editModal = document.getElementById('editMaterialModal');
+    if (editModal) {
+        editModal.addEventListener('hidden.bs.modal', function() {
+            const submitBtn = document.querySelector('#editMaterialForm button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save me-1"></i> حفظ التعديلات';
+            }
+        });
+    }
+
+    // تحسين تجربة نماذج الإضافة
+    const materialTypeForm = document.getElementById('materialTypeForm');
+    if (materialTypeForm) {
+        materialTypeForm.addEventListener('submit', function() {
+            showLoadingState(true);
+        });
+    }
+
+    const materialForm = document.getElementById('materialForm');
+    if (materialForm) {
+        materialForm.addEventListener('submit', function() {
+            const addMaterialBtn = document.getElementById('addMaterialBtn');
+            if (addMaterialBtn) {
+                addMaterialBtn.disabled = true;
+                addMaterialBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الإضافة...';
+            }
+        });
+    }
+}
+
+// دالة تصفية المواد
+function filterMaterials() {
+    const searchText = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const typeFilter = document.getElementById('typeFilter')?.value || '';
+    const statusFilter = document.getElementById('statusFilter')?.value || '';
+
+    const rows = document.querySelectorAll('#materialsTable tbody tr');
+
+    rows.forEach(row => {
+        const materialName = row.cells[1]?.textContent.toLowerCase() || '';
+        const materialType = row.getAttribute('data-type') || '';
+        const materialStatus = row.getAttribute('data-status') || '';
+
+        const matchesSearch = materialName.includes(searchText);
+        const matchesType = !typeFilter || materialType === typeFilter;
+        const matchesStatus = !statusFilter || materialStatus === statusFilter;
+
+        row.style.display = (matchesSearch && matchesType && matchesStatus) ? '' : 'none';
+    });
+}
+
+// إعادة تعيين الفلاتر
+function resetFilters() {
+    const searchInput = document.getElementById('searchInput');
+    const typeFilter = document.getElementById('typeFilter');
+    const statusFilter = document.getElementById('statusFilter');
+
+    if (searchInput) searchInput.value = '';
+    if (typeFilter) typeFilter.value = '';
+    if (statusFilter) statusFilter.value = '';
+
+    filterMaterials();
+}
+
+// دالة لعرض الرسائل
+function showAlert(message, type) {
+    // إزالة أي رسائل سابقة
+    const existingAlerts = document.querySelectorAll('.custom-alert');
+    existingAlerts.forEach(alert => alert.remove());
+
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `custom-alert alert alert-${type} alert-custom alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+
+    const icon = type === 'success' ? 'check-circle' :
+                 type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle';
+
+    alertDiv.innerHTML = `
+        <i class="fas fa-${icon} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    document.body.appendChild(alertDiv);
+
+    setTimeout(() => {
+        if (alertDiv.parentNode) alertDiv.remove();
+    }, 5000);
+}
+
+// إظهار/إخفاء حالة التحميل
+function showLoadingState(show) {
+    const addTypeBtn = document.getElementById('addTypeBtn');
+    const addMaterialBtn = document.getElementById('addMaterialBtn');
+
+    if (show) {
+        if (addTypeBtn) {
+            addTypeBtn.disabled = true;
+            addTypeBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري المعالجة...';
+        }
+        if (addMaterialBtn) {
+            addMaterialBtn.disabled = true;
+            addMaterialBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري المعالجة...';
+        }
+    } else {
+        if (addTypeBtn) {
+            addTypeBtn.disabled = false;
+            addTypeBtn.innerHTML = '<i class="fas fa-plus me-1"></i> إضافة نوع';
+        }
+        if (addMaterialBtn) {
+            addMaterialBtn.disabled = false;
+            addMaterialBtn.innerHTML = '<i class="fas fa-plus me-1"></i> إضافة مادة';
+        }
+    }
+}
+
+// تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Materials management page initialized');
+    loadMaterialTypes();
+    setupEventListeners();
+});
+</script>
+{% endblock %}
