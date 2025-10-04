@@ -24,10 +24,10 @@
                         <span class="input-group-text bg-primary text-white">
                             <i class="fas fa-home"></i>
                         </span>
-                        <select name="housing_unit_id" class="form-select" required>
+                        <select name="housing_unit_id" id="housing_unit_id" class="form-select" required>
                             <option value="">اختر السكن</option>
                             {% for housing in housings %}
-                                <option value="{{ housing.id }}" {% if housing_unit_id == housing.id|string %}selected{% endif %}>
+                                <option value="{{ housing.id }}" {% if housing_unit_id and housing_unit_id == housing.id|string %}selected{% endif %}>
                                     {{ housing.name }}
                                 </option>
                             {% endfor %}
@@ -40,7 +40,7 @@
                         <span class="input-group-text bg-primary text-white">
                             <i class="fas fa-calendar-alt"></i>
                         </span>
-                        <input type="month" name="month" value="{{ month or '' }}" class="form-control" required>
+                        <input type="month" name="month" id="month" value="{{ month or '' }}" class="form-control" required>
                     </div>
                 </div>
                 <div class="col-md-4 text-center">
@@ -52,7 +52,7 @@
         </div>
     </div>
 
-    {% if data %}
+    {% if data and data|length > 0 %}
     <!-- بطاقة الإحصائيات السريعة -->
     <div class="row mb-4">
         <div class="col-md-3">
@@ -93,26 +93,30 @@
         </div>
     </div>
 
-    <!-- جدول البيانات -->
-    <div class="card shadow border-0">
-        <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 text-primary">
-                <i class="fas fa-table me-2"></i>بيانات الاستهلاك - {{ month }}
-            </h5>
-            <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="clearAll">
-                    <i class="fas fa-eraser me-1"></i>مسح الكل
-                </button>
-                <button type="submit" name="save" class="btn btn-success">
-                    <i class="fas fa-save me-2"></i>حفظ البيانات
-                </button>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            <form method="POST" id="consumptionForm">
-                <input type="hidden" name="housing_unit_id" value="{{ housing_unit_id }}">
-                <input type="hidden" name="month" value="{{ month }}">
+    <!-- 🔥 التصحيح: النموذج الرئيسي للحفظ -->
+    <form method="POST" id="consumptionForm">
+        <input type="hidden" name="housing_unit_id" value="{{ housing_unit_id }}">
+        <input type="hidden" name="month" value="{{ month }}">
 
+        <!-- جدول البيانات -->
+        <div class="card shadow border-0">
+            <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-primary">
+                    <i class="fas fa-table me-2"></i>بيانات الاستهلاك - {{ month }}
+                    {% if selected_housing %}
+                    - {{ selected_housing.name }}
+                    {% endif %}
+                </h5>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="clearAll">
+                        <i class="fas fa-eraser me-1"></i>مسح الكل
+                    </button>
+                    <button type="submit" name="save" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>حفظ البيانات
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover table-bordered mb-0" id="consumptionTable">
                         <thead class="table-primary sticky-top">
@@ -121,34 +125,87 @@
                                 <th width="20%" class="bg-gradient-th">سعر الوحدة</th>
                                 <th width="20%" class="bg-gradient-th">الكمية</th>
                                 <th width="20%" class="bg-gradient-th">قيمة البند</th>
-                                <th width="15%" class="bg-gradient-th">الإجراءات</th>
+                                <th width="15%" class="bg-gradient-th">نوع الحساب</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for item in data %}
                             <tr class="consumption-row">
                                 <td class="fw-bold item-name">{{ item.name }}</td>
+
+                                <!-- 🔥 التعديل: عمود سعر الوحدة - قابل للتعديل في جميع الأنواع -->
                                 <td>
                                     <div class="input-group">
-                                        <input type="number" name="unit_price_{{ item.expense_item_id }}"
-                                               value="{{ item.unit_price }}" step="0.01"
-                                               class="form-control price_input text-center">
+                                        <input type="number"
+                                               name="unit_price_{{ item.expense_item_id }}"
+                                               value="{{ item.unit_price }}"
+                                               step="0.01" min="0"
+                                               class="form-control price_input text-center"
+                                               placeholder="0.00">
                                         <span class="input-group-text">ر.س</span>
                                     </div>
                                 </td>
+
+                                <!-- عمود الكمية - حسب نوع الحساب -->
                                 <td>
-                                    <div class="input-group">
-                                        <input type="number" name="qty_{{ item.expense_item_id }}"
-                                               value="{{ item.qty }}" step="0.01"
-                                               class="form-control qty_input text-center">
-                                        <span class="input-group-text">وحدة</span>
-                                    </div>
+                                    {% if item.calculation_type == 'fixed' %}
+                                        <!-- البنود الثابتة: الكمية تحسب تلقائياً -->
+                                        <div class="text-center fw-bold text-primary">
+                                            {{ item.calculated_qty }}
+                                        </div>
+                                        <div class="text-center small text-muted">
+                                            <i class="fas fa-users me-1"></i>ساكن
+                                        </div>
+                                        <input type="hidden"
+                                               name="qty_{{ item.expense_item_id }}"
+                                               value="{{ item.calculated_qty }}">
+                                    {% elif item.calculation_type == 'percentage' %}
+                                        <!-- البنود النسبية: عرض فقط -->
+                                        <div class="text-center fw-bold text-info">
+                                            {{ "%.1f"|format(item.calculated_qty * 100) }}%
+                                        </div>
+                                        <div class="text-center small text-muted">
+                                            <i class="fas fa-chart-pie me-1"></i>نسبة
+                                        </div>
+                                        <!-- لا يوجد input لأنها لا تحفظ -->
+                                    {% elif item.is_editable %}
+                                        <!-- البنود العادية: يمكن تعديل الكمية -->
+                                        <div class="input-group">
+                                            <input type="number"
+                                                   name="qty_{{ item.expense_item_id }}"
+                                                   value="{{ item.qty }}"
+                                                   step="0.01" min="0"
+                                                   class="form-control qty_input text-center"
+                                                   placeholder="0.00">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-weight-hanging"></i>
+                                            </span>
+                                        </div>
+                                        <div class="text-center small text-muted mt-1">وحدة قياس</div>
+                                    {% else %}
+                                        <!-- البنود الأخرى: للعرض فقط -->
+                                        <div class="text-center fw-bold text-secondary">
+                                            {{ item.calculated_qty }}
+                                        </div>
+                                        <div class="text-center small text-muted">
+                                            <i class="fas fa-eye"></i> للعرض
+                                        </div>
+                                    {% endif %}
                                 </td>
-                                <td class="total_price fw-bold text-success text-center">0.00</td>
+
+                                <td class="total_price fw-bold text-success text-center">
+                                    {{ "%.2f"|format(item.total_price) }}
+                                </td>
                                 <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-danger clear-row">
-                                        <i class="fas fa-times"></i>
-                                    </button>
+                                    {% if item.calculation_type == 'normal' %}
+                                        <span class="badge bg-primary">عادي</span>
+                                    {% elif item.calculation_type == 'fixed' %}
+                                        <span class="badge bg-success">ثابت</span>
+                                    {% elif item.calculation_type == 'percentage' %}
+                                        <span class="badge bg-info">نسبي</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ item.calculation_type }}</span>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -158,15 +215,17 @@
                                 <td class="bg-dark text-white">المجموع</td>
                                 <td class="text-center">-</td>
                                 <td class="text-center" id="footerQty">0</td>
-                                <td class="text-center text-success" id="footerTotal">0.00</td>
+                                <td class="text-center text-success" id="footerTotal">
+                                    {{ "%.2f"|format(data|sum(attribute='total_price')) }}
+                                </td>
                                 <td class="text-center">-</td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
+    </form>
 
     <!-- رسم بياني مصغر -->
     <div class="card mt-4 shadow border-0">
@@ -175,6 +234,15 @@
         </div>
         <div class="card-body">
             <canvas id="consumptionChart" height="100"></canvas>
+        </div>
+    </div>
+    {% elif housing_unit_id and month %}
+    <!-- رسالة عندما لا توجد بيانات -->
+    <div class="card shadow border-0">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">لا توجد بيانات للعرض</h4>
+            <p class="text-muted">لم يتم العثور على بنود استهلاك للوحدة المحددة</p>
         </div>
     </div>
     {% endif %}
@@ -214,27 +282,53 @@
 
     .item-name {
         background-color: #f8f9fa;
-        position: sticky;
-        left: 0;
-    }
-
-    #consumptionTable {
-        font-size: 0.9rem;
     }
 
     .input-group-text {
         background-color: #e9ecef;
         font-size: 0.8rem;
     }
+
+    input[readonly] {
+        background-color: #f8f9fa;
+        cursor: not-allowed;
+    }
 </style>
 
 <script>
     // دالة لحساب القيم
     function recalc(row) {
-        const price = parseFloat(row.querySelector(".price_input").value) || 0;
-        const qty = parseFloat(row.querySelector(".qty_input").value) || 0;
+        const priceInput = row.querySelector(".price_input");
+        const qtyInput = row.querySelector(".qty_input");
+        const totalCell = row.querySelector(".total_price");
+
+        if (!priceInput || !totalCell) return {price: 0, qty: 0, total: 0};
+
+        const price = parseFloat(priceInput.value) || 0;
+
+        // تحديد الكمية حسب نوع الحساب
+        let qty = 0;
+        if (qtyInput && qtyInput.type !== 'hidden') {
+            qty = parseFloat(qtyInput.value) || 0;
+        } else {
+            // للبنود التي لها قيمة محسوبة
+            const calculatedElement = row.querySelector('.text-primary, .text-info, .text-secondary');
+            if (calculatedElement) {
+                const text = calculatedElement.textContent.trim();
+                if (text.includes('%')) {
+                    qty = parseFloat(text) / 100 || 0;
+                } else {
+                    qty = parseFloat(text) || 0;
+                }
+            }
+        }
+
         const total = (price * qty).toFixed(2);
-        row.querySelector(".total_price").textContent = total;
+
+        if (totalCell) {
+            totalCell.textContent = total;
+        }
+
         return {price, qty, total: parseFloat(total)};
     }
 
@@ -266,14 +360,18 @@
 
     // دالة لتحديث الرسم البياني
     function updateChart() {
-        const ctx = document.getElementById('consumptionChart').getContext('2d');
+        const ctx = document.getElementById('consumptionChart');
+        if (!ctx) return;
+
         const items = [];
         const values = [];
 
         document.querySelectorAll(".consumption-row").forEach(row => {
-            const itemName = row.querySelector(".item-name").textContent;
-            const value = parseFloat(row.querySelector(".total_price").textContent) || 0;
-            if (value > 0) {
+            const itemName = row.querySelector(".item-name").textContent.trim();
+            const totalCell = row.querySelector(".total_price");
+            const value = totalCell ? parseFloat(totalCell.textContent) || 0 : 0;
+
+            if (value > 0 && itemName) {
                 items.push(itemName);
                 values.push(value);
             }
@@ -314,6 +412,11 @@
                     }
                 }
             });
+        } else {
+            // إذا لا توجد بيانات، عرض رسالة
+            ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+            ctx.getContext('2d').font = '16px Arial';
+            ctx.getContext('2d').fillText('لا توجد بيانات للعرض', 10, 50);
         }
     }
 
@@ -322,25 +425,22 @@
         // تحديث أولي
         updateStats();
 
-        // أحداث الإدخال
-        document.querySelectorAll(".price_input, .qty_input").forEach(input => {
+        // 🔥 التعديل: أحداث الإدخال لجميع حقول سعر الوحدة
+        document.querySelectorAll(".price_input").forEach(input => {
             input.addEventListener("input", () => {
                 updateStats();
             });
         });
 
-        // مسح الصف
-        document.querySelectorAll(".clear-row").forEach(btn => {
-            btn.addEventListener("click", function() {
-                const row = this.closest("tr");
-                row.querySelector(".price_input").value = "";
-                row.querySelector(".qty_input").value = "";
+        // أحداث الإدخال لحقول الكمية القابلة للتعديل فقط
+        document.querySelectorAll(".qty_input").forEach(input => {
+            input.addEventListener("input", () => {
                 updateStats();
             });
         });
 
         // مسح الكل
-        document.getElementById("clearAll").addEventListener("click", function() {
+        document.getElementById("clearAll")?.addEventListener("click", function() {
             if (confirm("هل أنت متأكد من مسح جميع البيانات؟")) {
                 document.querySelectorAll(".price_input, .qty_input").forEach(input => {
                     input.value = "";

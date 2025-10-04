@@ -3677,8 +3677,6 @@ def export_linked_assets_excel():
 # ======================
 #  تصدير PDF
 # ======================
-from io import BytesIO
-from flask import send_file, Blueprint
 from fpdf import FPDF
 import arabic_reshaper
 from bidi.algorithm import get_display
@@ -3875,11 +3873,8 @@ def assets_movements_report():
     actions = query.order_by(AssetAction.action_date.desc()).all()
     return render_template("assets/assets_movements_report.html", actions=actions, action_type_filter=action_type_filter)
 
-from flask import render_template, request
 from sqlalchemy import literal, or_
 from models import db, Asset, AssetDisposal, AssetLink, HousingUnit, Room
-from sqlalchemy.orm import aliased
-from datetime import datetime
 
 def format_date(date_value):
     """ترجع التاريخ بصيغة YYYY-MM-DD أو نص فارغ"""
@@ -5217,119 +5212,262 @@ def link_expense_items_to_housings():
     db.session.commit()
     print("✅ تم ربط البنود بالسكنات بنجاح")
 
+import calendar  # 🔥 أضف هذا السطر
+
 from datetime import datetime, timedelta
 from sqlalchemy import func
 
-def get_total_residents(housing_identifier, month_input, allowed_housings_item=None, total=False):
+import calendar  # 🔥 تأكد من وجود هذا الاستيراد
+from datetime import datetime, timedelta
+from sqlalchemy import text
 
+
+def get_total_residents(housing_identifier, month_input, total=False, use_daily_method=True):
     """
-    إرجاع متوسط أو إجمالي عدد الساكنين الشهري لسكن محدد
-    total=False => ترجع المتوسط
-    total=True  => ترجع الإجمالي
+    🔥 الدالة الموحدة لحساب الساكنين - تعمل بنفس طريقة daily_resident_view
     """
     if isinstance(month_input, str):
         try:
-            month = datetime.strptime(month_input, "%Y-%m")
+            selected_month = datetime.strptime(month_input, '%Y-%m')
         except ValueError:
-            month = datetime.today().replace(day=1)
+            selected_month = datetime.today().replace(day=1)
     elif isinstance(month_input, datetime):
-        month = month_input
+        selected_month = month_input
     else:
-        month = datetime.today().replace(day=1)
+        selected_month = datetime.today().replace(day=1)
 
-    first_day = month.replace(day=1)
-    last_day = (first_day.replace(month=month.month+1, day=1) - timedelta(days=1)) \
-        if month.month != 12 else (first_day.replace(year=month.year+1, month=1, day=1) - timedelta(days=1))
+    first_day = selected_month.replace(day=1)
+    if selected_month.month == 12:
+        last_day = first_day.replace(year=selected_month.year + 1, month=1, day=1) - timedelta(days=1)
+    else:
+        last_day = first_day.replace(month=selected_month.month + 1, day=1) - timedelta(days=1)
 
-    db.session.expire_all()
+    # 🔥 نفس استعلام daily_resident_view
+    sql_query = text("""
+        SELECT 
+            hu.id as housing_id,
+            COALESCE(TRIM(hu.name), 'غير محدد') as housing_name,
+            DATE(fa.date || ' ' || CASE 
+                WHEN fa.check_in != '' AND fa.check_in != '-' THEN fa.check_in 
+                ELSE '00:00:00' 
+            END) as date_only,
+            COUNT(fa.id) as count
+        FROM fingerprint_archive fa
+        JOIN employees e ON fa.employee_code = e.employee_code
+        LEFT JOIN bed_assignments ba ON e.id = ba.employee_id 
+            AND ba.active = 1 
+            AND ba.start_date <= :last_day 
+            AND (ba.end_date IS NULL OR ba.end_date >= :first_day)
+        LEFT JOIN beds b ON ba.bed_id = b.id
+        LEFT JOIN rooms r ON b.room_id = r.id
+        LEFT JOIN housing_units hu ON r.housing_unit_id = hu.id
+        WHERE DATE(fa.date) >= :first_day 
+            AND DATE(fa.date) <= :last_day
+            AND hu.id IS NOT NULL
+        GROUP BY hu.id, hu.name, date_only
+        ORDER BY housing_name, date_only
+    """)
 
-    query = db.session.query(func.count(FingerprintArchive.id)) \
-        .join(Employee, FingerprintArchive.employee_code == Employee.employee_code) \
-        .outerjoin(BedAssignment, Employee.id == BedAssignment.employee_id) \
-        .outerjoin(Bed, BedAssignment.bed_id == Bed.id) \
-        .outerjoin(Room, Bed.room_id == Room.id) \
-        .outerjoin(HousingUnit, Room.housing_unit_id == HousingUnit.id) \
-        .filter(FingerprintArchive.date >= first_day, FingerprintArchive.date <= last_day)
+    all_entries = db.session.execute(sql_query, {
+        'first_day': first_day.date(),
+        'last_day': last_day.date()
+    }).fetchall()
 
-    if housing_identifier is not None:
-        if isinstance(housing_identifier, int):
-            query = query.filter(HousingUnit.id == housing_identifier)
+    # تجميع البيانات بكل الطرق (id و name)
+    housing_by_id = {}
+    housing_by_name = {}
+
+    for entry in all_entries:
+        housing_id = entry.housing_id
+        housing_name = entry.housing_name
+        count = entry.count
+
+        if housing_id not in housing_by_id:
+            housing_by_id[housing_id] = []
+        housing_by_id[housing_id].append(count)
+
+        if housing_name not in housing_by_name:
+            housing_by_name[housing_name] = []
+        housing_by_name[housing_name].append(count)
+
+    # 🔥 البحث الذكي عن الوحدة السكنية
+    counts = None
+    target_key = None
+
+    if isinstance(housing_identifier, int):
+        # بحث بالمعرف
+        if housing_identifier in housing_by_id:
+            counts = housing_by_id[housing_identifier]
+            target_key = f"id:{housing_identifier}"
         else:
-            query = query.filter(func.trim(HousingUnit.name) == housing_identifier)
-
-    daily_counts = query.group_by(FingerprintArchive.date).all()
-    counts = [c[0] for c in daily_counts]
-
-    if total:
-        return sum(counts)  # إجمالي الساكنين
+            # إذا لم نجد بالمعرف، نجرب البحث بالاسم
+            housing_unit = HousingUnit.query.get(housing_identifier)
+            if housing_unit and housing_unit.name in housing_by_name:
+                counts = housing_by_name[housing_unit.name]
+                target_key = f"name:{housing_unit.name}"
     else:
-        non_zero_days = sum(1 for c in counts if c > 0)
-        return round(sum(counts) / non_zero_days, 1) if non_zero_days else 0  # المتوسط
+        # بحث بالاسم
+        housing_name = str(housing_identifier).strip()
+        if housing_name in housing_by_name:
+            counts = housing_by_name[housing_name]
+            target_key = f"name:{housing_name}"
+        else:
+            # بحث بتطابق جزئي
+            for name in housing_by_name.keys():
+                if housing_name in name or name in housing_name:
+                    counts = housing_by_name[name]
+                    target_key = f"name:{name} (مطابقة جزئية)"
+                    break
 
-    form = HousingUnitForm()
+    if counts is None:
+        print(f"⚠️ [get_total_residents] لم يتم العثور على بيانات للوحدة: {housing_identifier}")
+        return 0
 
-    housings_list = HousingUnit.query.all()
+    # 🔥 الحساب النهائي
+    if total:
+        total_residents = sum(counts)
+        print(f"🔍 [get_total_residents] {target_key} - الإجمالي: {total_residents}")
+        return total_residents
+    else:
+        non_zero_days = sum(1 for count in counts if count > 0)
+        if non_zero_days > 0:
+            avg_residents = sum(counts) / non_zero_days
+            print(f"🔍 [get_total_residents] {target_key} - المتوسط: {avg_residents:.1f} من {non_zero_days} يوم")
+            return round(avg_residents, 1)
+        else:
+            print(f"🔍 [get_total_residents] {target_key} - لا توجد بيانات ساكنين")
+            return 0
 
-    items_list = ExpenseItem.query.order_by(ExpenseItem.name).all()
+def get_days_calculation(month, calculation_type="daily"):
+    """
+    حساب الأيام للاستهلاك اليومي
+    calculation_type: "daily" - حتى اليوم, "monthly" - كامل الشهر
+    """
+    if isinstance(month, str):
+        month_date = datetime.strptime(month, "%Y-%m")
+    else:
+        month_date = month
 
-    if form.validate_on_submit():
-        if HousingUnit.query.filter_by(name=form.name.data).first():
-            flash('اسم المستخدم موجود مسبقاً', 'warning')
-            return render_template('water/monthly_consumption.html', form=form, users=users_list, items=items_list)
-        # مثال: إضافة مستخدم
-        housing_units = HousingUnit(
-            name=form.name.data,
-            username=form.username.data
-        )
-        # ربط المستخدم بالمناطق المختارة
-        housing_units.items = HousingUnit.query.filter(HousingUnit.id.in_(form.item_ids.data)).all()
-        db.session.add(user)
-        db.session.commit()
+    # أول يوم في الشهر
+    first_day = month_date.replace(day=1)
+    # آخر يوم في الشهر
+    last_day = month_date.replace(day=calendar.monthrange(month_date.year, month_date.month)[1])
+    # اليوم الحالي
+    today = datetime.now().date()
+
+    if calculation_type == "daily":
+        # إذا كان الشهر الحالي
+        if month_date.month == today.month and month_date.year == today.year:
+            # عدد الأيام من بداية الشهر حتى اليوم (بما فيه اليوم)
+            days_passed = today.day
+            total_days = last_day.day
+        else:
+            # إذا كان شهر ماضي، استخدام كامل الشهر
+            days_passed = last_day.day
+            total_days = last_day.day
+    else:
+        # حساب شهري كامل
+        days_passed = last_day.day
+        total_days = last_day.day
+
+    return days_passed, total_days
 
 
-from flask import request, render_template, flash, redirect, url_for
-from sqlalchemy.orm import joinedload
-from models import db, HousingUnit, ExpenseItem, MonthlyConsumption
+def calculate_daily_cost(unit_price, qty, month, calculation_type="normal"):
+    """
+    حساب التكلفة اليومية للبند
+    """
+    days_passed, total_days = get_days_calculation(month)
+
+    if calculation_type == "fixed":
+        # البنود الثابتة: (سعر الوحدة / أيام الشهر) * الأيام المنقضية
+        daily_unit_price = (unit_price / total_days) * days_passed
+        total_cost = daily_unit_price * qty
+    elif calculation_type == "percentage":
+        # البنود النسبية: (سعر الوحدة / أيام الشهر) * الأيام المنقضية * النسبة
+        daily_unit_price = (unit_price / total_days) * days_passed
+        total_cost = daily_unit_price * qty
+    else:
+        # البنود العادية: (سعر الوحدة * الكمية / أيام الشهر) * الأيام المنقضية
+        monthly_cost = unit_price * qty
+        daily_cost = (monthly_cost / total_days) * days_passed
+        total_cost = daily_cost
+
+    return round(total_cost, 2), days_passed, total_days
+
 @bp.route("/monthly_consumption", methods=["GET", "POST"])
 def monthly_consumption():
     housings = HousingUnit.query.order_by(HousingUnit.name).all()
-    housing_unit_id = request.form.get("housing_unit_id") if request.method == "POST" else None
-    month = request.form.get("month") if request.method == "POST" else None
+    housing_unit_id = request.args.get("housing_unit_id") or request.form.get("housing_unit_id")
+    month = request.args.get("month") or request.form.get("month")
+
+    if not month:
+        month = datetime.now().strftime("%Y-%m")
 
     data = []
+    selected_housing = None
+
+    print(f"🔍 [DEBUG] monthly_consumption called")
+    print(f"🔍 [DEBUG] housing_unit_id: {housing_unit_id}, month: {month}")
 
     if housing_unit_id and month:
-        housing_unit = HousingUnit.query.options(joinedload(HousingUnit.items)).get(int(housing_unit_id))
+        selected_housing = HousingUnit.query.get(int(housing_unit_id))
 
-        consumptions = {
-            mc.expense_item_id: mc
-            for mc in MonthlyConsumption.query.filter_by(
-                housing_unit_id=housing_unit_id,
-                month=month
-            ).all()
-        }
+        if not selected_housing:
+            flash("الوحدة السكنية غير موجودة", "error")
+            return redirect(url_for("main.monthly_consumption"))
+
+        # جلب جميع البنود المنطبقة
+        all_items = ExpenseItem.query.all()
+        applicable_items = [
+            item for item in all_items
+            if not item.housings or selected_housing in item.housings
+        ]
+
+        # 🔥 جلب البيانات المحفوظة لهذه الوحدة والشهر
+        saved_consumptions = MonthlyConsumption.query.filter_by(
+            housing_unit_id=housing_unit_id,
+            month=month
+        ).all()
+
+        # تحويل إلى dictionary للبحث السريع
+        saved_data = {sc.expense_item_id: sc for sc in saved_consumptions}
 
         # تجهيز البيانات للعرض
-        for item in housing_unit.items:
-            mc = consumptions.get(item.id)
-            unit_price = mc.unit_price if mc and mc.unit_price is not None else (item.unit_price or 0)
-            qty = mc.qty if mc else 0
+        for item in applicable_items:
+            saved_record = saved_data.get(item.id)
+
+            # 🔥 استخدام البيانات المحفوظة إذا وجدت، وإلا البيانات الافتراضية
+            if saved_record:
+                unit_price = saved_record.unit_price if saved_record.unit_price is not None else (item.unit_price or 0)
+                qty = saved_record.qty
+            else:
+                unit_price = item.unit_price or 0
+                qty = 0
+
+            total_price = 0
+            calculated_qty = qty
+            is_editable = True  # جميع أسعار الوحدة قابلة للتعديل
 
             if item.calculation_type == "normal":
                 total_price = qty * unit_price
+
             elif item.calculation_type == "fixed":
-                total_residents = get_total_residents(housing_unit.id, month, total=True)
-                qty = total_residents  # الكمية دائماً = إجمالي الساكنين
-                unit_price = mc.unit_price if mc and mc.unit_price is not None else (item.unit_price or 0)
-                total_price = qty * unit_price
+                total_residents = get_total_residents(selected_housing.id, month, total=True)
+                calculated_qty = total_residents
+                total_price = total_residents * unit_price
+                # للبنود الثابتة، الكمية تحسب تلقائياً
+                qty = total_residents  # للتخزين
 
             elif item.calculation_type == "percentage":
-                allowed_housings = item.housings
-                total_residents = get_total_residents(housing_unit.id, month)
+                allowed_housings = item.housings or HousingUnit.query.all()
+                total_residents = get_total_residents(selected_housing.id, month)
                 overall_residents = sum(get_total_residents(h.id, month) for h in allowed_housings)
                 ratio = total_residents / overall_residents if overall_residents else 0
-                qty = ratio  # للعرض فقط
-                total_price = (unit_price or 0) * ratio
+                calculated_qty = ratio
+                total_price = unit_price * ratio
+                # للبنود النسبية، لا تخزن الكمية
+                qty = ratio  # للتخزين
             else:
                 total_price = qty * unit_price
 
@@ -5337,55 +5475,97 @@ def monthly_consumption():
                 "expense_item_id": item.id,
                 "name": item.name,
                 "unit_price": unit_price,
-                "qty": qty,
+                "qty": qty,  # القيمة المخزنة
+                "calculated_qty": calculated_qty,  # القيمة المعروضة
                 "calculation_type": item.calculation_type,
-                "total_price": round(total_price, 2)
+                "total_price": round(total_price, 2),
+                "is_editable": is_editable
             })
 
-        # حفظ الكميات والأسعار فقط للبنود القابلة للتعديل
+        # 🔥 حفظ البيانات عند الضغط على زر الحفظ
         if request.method == "POST" and "save" in request.form:
-            for item in housing_unit.items:
-                if item.calculation_type == "percentage":
-                    # لا نحفظ النسب لأنها محسوبة تلقائيًا
-                    continue
+            print(f"💾 [DEBUG] About to save {len(data)} items")
 
-                unit_price = request.form.get(f"unit_price_{item.id}")
-                qty = request.form.get(f"qty_{item.id}")
+            try:
+                saved_count = 0
+                for item_data in data:
+                    item_id = item_data["expense_item_id"]
 
-                mc = MonthlyConsumption.query.filter_by(
-                    housing_unit_id=housing_unit_id,
-                    expense_item_id=item.id,
-                    month=month
-                ).first()
+                    # جلب القيم من النموذج
+                    unit_price_key = f"unit_price_{item_id}"
+                    qty_key = f"qty_{item_id}"
 
-                unit_price = float(unit_price or 0)
-                qty = float(qty or 0)
+                    unit_price = request.form.get(unit_price_key)
 
-                if mc:
-                    mc.unit_price = unit_price
-                    mc.qty = qty
-                else:
-                    mc = MonthlyConsumption(
-                        housing_unit_id=housing_unit_id,
-                        expense_item_id=item.id,
-                        month=month,
-                        unit_price=unit_price,
-                        qty=qty
-                    )
-                    db.session.add(mc)
+                    if unit_price is not None:
+                        try:
+                            unit_price = float(unit_price or 0)
 
-            db.session.commit()
-            flash("تم الحفظ بنجاح ✅", "success")
-            return redirect(url_for("main.monthly_consumption", housing_unit_id=housing_unit_id, month=month))
+                            # تحديد الكمية حسب نوع الحساب
+                            if item_data["calculation_type"] == "fixed":
+                                total_residents = get_total_residents(selected_housing.id, month, total=True)
+                                qty = total_residents
+                            elif item_data["calculation_type"] == "percentage":
+                                allowed_housings = [h for h in
+                                                    (item_data.get('allowed_housings') or HousingUnit.query.all())]
+                                total_residents = get_total_residents(selected_housing.id, month)
+                                overall_residents = sum(get_total_residents(h.id, month) for h in allowed_housings)
+                                ratio = total_residents / overall_residents if overall_residents else 0
+                                qty = ratio
+                            else:
+                                qty_input = request.form.get(qty_key)
+                                qty = float(qty_input or 0) if qty_input is not None else item_data["qty"]
+
+                            # البحث عن السجل الموجود أو إنشاء جديد
+                            mc = MonthlyConsumption.query.filter_by(
+                                housing_unit_id=housing_unit_id,
+                                expense_item_id=item_id,
+                                month=month
+                            ).first()
+
+                            if mc:
+                                mc.unit_price = unit_price
+                                mc.qty = qty
+                                print(f"✏️ [DEBUG] تحديث السجل: {item_id}")
+                            else:
+                                mc = MonthlyConsumption(
+                                    housing_unit_id=housing_unit_id,
+                                    expense_item_id=item_id,
+                                    month=month,
+                                    unit_price=unit_price,
+                                    qty=qty
+                                )
+                                db.session.add(mc)
+                                print(f"➕ [DEBUG] إنشاء سجل جديد: {item_id}")
+
+                            saved_count += 1
+
+                        except ValueError as e:
+                            print(f"❌ [DEBUG] خطأ في تحويل الأرقام: {e}")
+                            continue
+
+                db.session.commit()
+                flash(f"تم حفظ {saved_count} بند بنجاح ✅", "success")
+                print(f"💾 [DEBUG] تم الحفظ بنجاح: {saved_count} عنصر")
+
+                # إعادة التوجيه لعرض البيانات المحدثة
+                return redirect(url_for("main.monthly_consumption",
+                                        housing_unit_id=housing_unit_id,
+                                        month=month))
+
+            except Exception as e:
+                db.session.rollback()
+                flash(f"خطأ في الحفظ: {str(e)}", "error")
+                print(f"❌ [DEBUG] خطأ في الحفظ: {e}")
 
     return render_template(
         "water/monthly_consumption.html",
         housings=housings,
         data=data,
         housing_unit_id=housing_unit_id,
-        month=month
+        month=month,
+        selected_housing=selected_housing
     )
-
 
 from models import db, HousingUnit, ExpenseItem, MonthlyConsumption
 
@@ -5412,13 +5592,14 @@ def currency_format(value):
 # دالة لحساب بيانات الاستهلاك
 # ===========================
 # دالة لحساب بيانات الاستهلاك
-def calculate_consumption_data(selected_month='', selected_housing=''):
+def calculate_consumption_data(selected_month='', selected_housing='', daily_calculation=True):
+    """
+    daily_calculation: إذا كان True يتم حساب التكلفة حتى اليوم الحالي
+    """
     housings = HousingUnit.query.order_by(HousingUnit.name).all()
     items = ExpenseItem.query.order_by(ExpenseItem.name).all()
 
-    # جلب الاستهلاك الشهري مسبقاً لكل السجلات
     records = MonthlyConsumption.query.filter_by(month=selected_month).all()
-    # تسهيل البحث
     records_dict = {(r.housing_unit_id, r.expense_item_id): r for r in records}
 
     data = []
@@ -5427,13 +5608,17 @@ def calculate_consumption_data(selected_month='', selected_housing=''):
     total_residents_sum = 0
     total_avg_residents_sum = 0
 
+    # 🔥 حساب معلومات الأيام
+    days_passed, total_days = get_days_calculation(selected_month)
+    today = datetime.now().strftime("%Y-%m-%d")
+
     for unit in housings:
         if selected_housing and str(unit.id) != str(selected_housing):
             continue
 
-        # حساب بيانات المقيمين لهذه الوحدة
-        avg_residents = get_total_residents(unit.id, selected_month)
-        total_residents = get_total_residents(unit.id, selected_month, total=True)
+        # 🔥 استخدام الدالة الموحدة الجديدة لحساب الساكنين
+        avg_residents = get_total_residents(unit.id, selected_month)  # المتوسط
+        total_residents = get_total_residents(unit.id, selected_month, total=True)  # الإجمالي
 
         row = {
             "unit_id": unit.id,
@@ -5441,11 +5626,21 @@ def calculate_consumption_data(selected_month='', selected_housing=''):
             "total_cost": 0,
             "per_item_costs": {},
             "avg_residents": avg_residents,
-            "total_residents": total_residents
+            "total_residents": total_residents,
+            "daily_info": {
+                "days_passed": days_passed,
+                "total_days": total_days,
+                "today": today,
+                "calculation_type": "daily" if daily_calculation else "monthly"
+            }
         }
 
         for item in items:
-            # جلب السجل المحفوظ إن وجد
+            if not is_item_applicable_to_housing(item, unit):
+                row[item.name] = 0
+                row["per_item_costs"][item.name] = 0
+                continue
+
             rec = records_dict.get((unit.id, item.id))
 
             if rec:
@@ -5456,27 +5651,56 @@ def calculate_consumption_data(selected_month='', selected_housing=''):
                 qty = 0
 
             value = 0
+            calculated_qty = qty
 
             if item.calculation_type == "normal":
-                value = qty * unit_price
-            elif item.calculation_type == "fixed":
-                total_residents = get_total_residents(unit.id, selected_month, total=True)
-                qty = total_residents  # الكمية تعرض دائماً إجمالي الساكنين
-                unit_price = rec.unit_price if rec and rec.unit_price is not None else item.unit_price or 0
-                value = qty * unit_price
-            elif item.calculation_type == "percentage":
-                allowed_housings = item.housings
-                total_residents = get_total_residents(unit.id, selected_month)
-                overall_residents = sum(get_total_residents(h.id, selected_month) for h in allowed_housings)
-                ratio = total_residents / overall_residents if overall_residents else 0
-                if not rec:  # إذا لم يتم حفظه مسبقًا
-                    qty = ratio
-                    value = unit_price * ratio
-                else:  # استخدم القيم المحفوظة
-                    value = qty * unit_price
-            else:
-                value = qty * unit_price
+                if daily_calculation:
+                    monthly_cost = unit_price * qty
+                    value = (monthly_cost / total_days) * days_passed
+                else:
+                    value = unit_price * qty
+                is_editable = True
 
+            elif item.calculation_type == "fixed":
+                total_residents_current = get_total_residents(unit.id, selected_month, total=True)
+                calculated_qty = total_residents_current
+                unit_price = rec.unit_price if rec and rec.unit_price is not None else (item.unit_price or 0)
+
+                if daily_calculation:
+                    daily_unit_price = (unit_price / total_days) * days_passed
+                    value = daily_unit_price * total_residents_current
+                else:
+                    value = unit_price * total_residents_current
+                is_editable = True
+
+            elif item.calculation_type == "percentage":
+                allowed_housings = item.housings or HousingUnit.query.all()
+                avg_residents_current = get_total_residents(unit.id, selected_month)
+                # 🔥 تصحيح: حساب إجمالي الساكنين للوحدات المسموحة
+                overall_residents = 0
+                for h in allowed_housings:
+                    if not selected_housing or str(h.id) == str(selected_housing):
+                        overall_residents += get_total_residents(h.id, selected_month)
+
+                ratio = avg_residents_current / overall_residents if overall_residents else 0
+                calculated_qty = ratio
+                unit_price = rec.unit_price if rec and rec.unit_price is not None else (item.unit_price or 0)
+
+                if daily_calculation:
+                    daily_unit_price = (unit_price / total_days) * days_passed
+                    value = daily_unit_price * ratio
+                else:
+                    value = unit_price * ratio
+                is_editable = True
+            else:
+                if daily_calculation:
+                    monthly_cost = unit_price * qty
+                    value = (monthly_cost / total_days) * days_passed
+                else:
+                    value = unit_price * qty
+                is_editable = True
+
+            value = round(value, 2)
             row[item.name] = value
             row["per_item_costs"][item.name] = value
             row["total_cost"] += value
@@ -5486,10 +5710,18 @@ def calculate_consumption_data(selected_month='', selected_housing=''):
         row["cost_per_resident"] = row["total_cost"] / avg_residents if avg_residents else 0
 
         overall_total += row["total_cost"]
+
+        # 🔥 تصحيح: جمع إجمالي الساكنين بشكل صحيح
         total_residents_sum += total_residents
         total_avg_residents_sum += avg_residents
 
         data.append(row)
+
+    # 🔥 تصحيح إضافي: إذا كان هناك فلترة بوحدة سكنية واحدة
+    if selected_housing and data:
+        # في حالة الفلترة، الإجمالي هو نفس قيمة الوحدة المحددة
+        total_residents_sum = data[0]["total_residents"] if data else 0
+        total_avg_residents_sum = data[0]["avg_residents"] if data else 0
 
     # حساب الإجماليات الكلية
     total_cost_per_resident = overall_total / total_avg_residents_sum if total_avg_residents_sum else 0
@@ -5499,10 +5731,27 @@ def calculate_consumption_data(selected_month='', selected_housing=''):
         "per_item": totals_per_item,
         "total_residents": total_residents_sum,
         "total_avg_residents": total_avg_residents_sum,
-        "total_cost_per_resident": total_cost_per_resident
+        "total_cost_per_resident": total_cost_per_resident,
+        "daily_info": {
+            "days_passed": days_passed,
+            "total_days": total_days,
+            "today": today,
+            "calculation_type": "daily" if daily_calculation else "monthly"
+        }
     }
 
     return data, totals
+
+def is_item_applicable_to_housing(item, housing_unit):
+    """
+    🔥 دالة جديدة: التحقق إذا كان البند ينطبق على الوحدة السكنية
+    """
+    # إذا لم يكن هناك وحدات محددة، ينطبق على الجميع
+    if not item.housings:
+        return True
+
+    # التحقق إذا كانت الوحدة السكنية موجودة في قائمة الوحدات المسموحة للبند
+    return any(h.id == housing_unit.id for h in item.housings)
 
 
 # ===========================
@@ -5512,7 +5761,10 @@ def consumption():
     selected_month = request.args.get("month", default=datetime.now().strftime("%Y-%m"))
     selected_housing = request.args.get("housing_units_id", default="")
 
-    data, totals = calculate_consumption_data(selected_month, selected_housing)
+    # 🔥 إضافة خيار الحساب اليومي
+    daily_calculation = request.args.get("daily", "true").lower() == "true"
+
+    data, totals = calculate_consumption_data(selected_month, selected_housing, daily_calculation)
 
     housing_units = HousingUnit.query.order_by(HousingUnit.name).all()
     expense_items = ExpenseItem.query.order_by(ExpenseItem.name).all()
@@ -5524,7 +5776,8 @@ def consumption():
         totals=totals,
         selected_month=selected_month,
         selected_housing=selected_housing,
-        housing_units=housing_units
+        housing_units=housing_units,
+        daily_calculation=daily_calculation  # 🔥 تمرير حالة الحساب اليومي
     )
 
 
@@ -5535,7 +5788,11 @@ def consumption_report():
     selected_housing = request.args.get("housing_units_id", type=int)
     selected_month = request.args.get("month", default=datetime.now().strftime("%Y-%m"))
 
-    data, totals = calculate_consumption_data(selected_month, selected_housing)
+    # 🔥 إضافة خيار الحساب اليومي للتقرير
+    daily_calculation = request.args.get("daily", "true").lower() == "true"
+
+    # 🔥 استخدام الدالة المعدلة مع خيار الحساب اليومي
+    data, totals = calculate_consumption_data(selected_month, selected_housing, daily_calculation)
 
     report_data = []
     for row in data:
@@ -5545,7 +5802,9 @@ def consumption_report():
             "total_cost": row["total_cost"],
             "total_residents": row["total_residents"],
             "avg_residents": row["avg_residents"],
-            "cost_per_resident": row["cost_per_resident"]
+            "cost_per_resident": row["cost_per_resident"],
+            # 🔥 إضافة معلومات الحساب اليومي
+            "daily_info": row.get("daily_info", {})
         })
 
     return render_template(
@@ -5554,7 +5813,8 @@ def consumption_report():
         totals=totals,
         units=HousingUnit.query.order_by(HousingUnit.name).all(),
         selected_housing=str(selected_housing) if selected_housing else "",
-        selected_month=selected_month
+        selected_month=selected_month,
+        daily_calculation=daily_calculation  # 🔥 تمرير حالة الحساب اليومي
     )
 from sqlalchemy import extract, func
 from models import db, DailyResident, MonthlyResidentAverage
