@@ -8,7 +8,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 # إنشاء instances - 🔥 الطريقة الحديثة
-db = SQLAlchemy()
+from models import db
+
 login_manager = LoginManager()
 migrate = Migrate()
 

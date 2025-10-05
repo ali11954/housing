@@ -432,7 +432,6 @@ class BedTransfer(db.Model):
     from_bed = db.relationship("Bed", foreign_keys=[from_bed_id])
     to_bed = db.relationship("Bed", foreign_keys=[to_bed_id])
 
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
 
@@ -521,7 +520,6 @@ class FingerprintArchive(db.Model):
     check_out = db.Column(db.String(20), nullable=True)
     date = db.Column(db.Date, nullable=False)
 
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
 
