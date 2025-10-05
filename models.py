@@ -252,7 +252,7 @@ class MonthlyConsumption(db.Model):
     )
     expense_item = db.relationship('ExpenseItem', back_populates='consumptions')
 
-from wtforms.validators import DataRequired
+#from wtforms.validators import DataRequired
 from wtforms import SelectField, TextAreaField, SubmitField
 from wtforms import SelectMultipleField
 
