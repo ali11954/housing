@@ -26,6 +26,21 @@ from flask_login import login_user, logout_user, login_required, current_user
 from models import User
 from openpyxl import load_workbook
 import pandas as pd
+import traceback
+from functools import wraps
+from sqlalchemy import text  # 🔥 مهم للإصدارات الجديدة
+
+# دالة لمعالجة الأخطاء
+def handle_errors(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            print(f"❌ خطأ في {f.__name__}: {str(e)}")
+            print(traceback.format_exc())
+            return "حدث خطأ في الخادم", 500
+    return decorated_function
     # أضف كود بديل هنا
 
 @bp.route('/login', methods=['GET', 'POST'])
